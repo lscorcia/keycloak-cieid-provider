@@ -1,0 +1,2 @@
+org.keycloak.broker.cieid.mappers.CieIdUsernameTemplateMapper
+org.keycloak.broker.cieid.mappers.CieIdUserAttributeMapper
