@@ -138,7 +138,12 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
             CieIdSAML2AuthnRequestBuilder authnRequestBuilder = new CieIdSAML2AuthnRequestBuilder()
                     .assertionConsumerUrl(assertionConsumerServiceUrl)
                     .destination(destinationUrl)
-                    .issuer(issuerURL)
+                    .issuer(SAML2NameIDBuilder.value(issuerURL)
+                        // CIEID: Aggiungi l'attributo NameQualifier all'elemento Issuer
+                        .setNameQualifier(issuerURL)
+                        // CIEID: Aggiungi l'attributo Format all'elemento Issuer
+                        .setFormat(JBossSAMLURIConstants.NAMEID_FORMAT_ENTITY.get())
+                        .build())
                     .forceAuthn(getConfig().isForceAuthn())
                     .protocolBinding(protocolBinding)
                     .nameIdPolicy(SAML2NameIDPolicyBuilder
@@ -290,9 +295,17 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
     }
 
     protected LogoutRequestType buildLogoutRequest(UserSessionModel userSession, UriInfo uriInfo, RealmModel realm, String singleLogoutServiceUrl, NodeGenerator... extensions) throws ConfigurationException {
+        String entityId = getEntityId(uriInfo, realm);
+
         SAML2LogoutRequestBuilder logoutBuilder = new SAML2LogoutRequestBuilder()
                 .assertionExpiration(realm.getAccessCodeLifespan())
-                .issuer(getEntityId(uriInfo, realm))
+                .issuer(SAML2NameIDBuilder.value(entityId)
+                    // SPID: Aggiungi l'attributo NameQualifier all'elemento Issuer
+                    .setNameQualifier(entityId)
+                    // SPID: Aggiungi l'attributo Format all'elemento Issuer
+                    .setFormat(JBossSAMLURIConstants.NAMEID_FORMAT_ENTITY.get())
+                    .build()
+                )
                 .sessionIndex(userSession.getNote(CieIdSAMLEndpoint.SAML_FEDERATED_SESSION_INDEX))
                 .nameId(NameIDType.deserializeFromString(userSession.getNote(CieIdSAMLEndpoint.SAML_FEDERATED_SUBJECT_NAMEID)))
                 .destination(singleLogoutServiceUrl);

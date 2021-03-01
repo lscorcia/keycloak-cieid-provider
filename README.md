@@ -24,8 +24,9 @@ limitations before planning your Production environment.
 
 ## Status
 This project is still at an alpha stage. It is currently under development 
-and things may change quickly. It builds and that's pretty much it, I'm still working on it and
-I haven't tested it at all.  
+and things may change quickly. It builds and successfully allows triggering the CIE ID authentication
+process, but that's pretty much it, I'm still working on it and I haven't tested it at all since
+I don't have access to a CIE card.  
 As far as I know it has not been used in Production in any environment yet.  
 
 Until the project gets to a stable release, it will be targeting the most recent release 
