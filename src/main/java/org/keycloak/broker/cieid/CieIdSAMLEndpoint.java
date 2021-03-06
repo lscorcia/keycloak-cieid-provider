@@ -20,6 +20,7 @@ package org.keycloak.broker.cieid;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.annotations.cache.NoCache;
 
+import org.jboss.resteasy.spi.ResteasyProviderFactory;
 import org.keycloak.broker.provider.BrokeredIdentityContext;
 import org.keycloak.broker.provider.IdentityBrokerException;
 import org.keycloak.broker.provider.IdentityProvider;
@@ -39,13 +40,17 @@ import org.keycloak.events.Details;
 import org.keycloak.events.Errors;
 import org.keycloak.events.EventBuilder;
 import org.keycloak.events.EventType;
+import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeyManager;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.models.UserSessionModel;
+import org.keycloak.protocol.LoginProtocol;
+import org.keycloak.protocol.LoginProtocolFactory;
 import org.keycloak.protocol.saml.JaxrsSAML2BindingBuilder;
 import org.keycloak.protocol.saml.SamlProtocol;
 import org.keycloak.protocol.saml.SamlProtocolUtils;
+import org.keycloak.protocol.saml.SamlService;
 import org.keycloak.protocol.saml.SamlSessionUtils;
 import org.keycloak.protocol.saml.preprocessor.SamlAuthenticationPreprocessor;
 import org.keycloak.saml.SAML2LogoutResponseBuilder;
@@ -63,6 +68,7 @@ import org.keycloak.saml.processing.core.util.XMLSignatureUtil;
 import org.keycloak.saml.processing.web.util.PostBindingUtil;
 import org.keycloak.services.ErrorPage;
 import org.keycloak.services.managers.AuthenticationManager;
+import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.messages.Messages;
 
 import javax.ws.rs.Consumes;
@@ -88,7 +94,11 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 import org.keycloak.protocol.saml.SamlPrincipalType;
 import org.keycloak.rotation.HardcodedKeyLocator;
@@ -96,6 +106,8 @@ import org.keycloak.rotation.KeyLocator;
 import org.keycloak.saml.processing.core.util.KeycloakKeySamlExtensionGenerator;
 import org.keycloak.saml.validators.ConditionsValidator;
 import org.keycloak.saml.validators.DestinationValidator;
+import org.keycloak.services.util.CacheControlUtil;
+import org.keycloak.sessions.AuthenticationSessionModel;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
@@ -119,7 +131,6 @@ public class CieIdSAMLEndpoint {
     public static final String SAML_FEDERATED_SUBJECT_NAMEID = "SAML_FEDERATED_SUBJECT_NAME_ID";
     public static final String SAML_LOGIN_RESPONSE = "SAML_LOGIN_RESPONSE";
     public static final String SAML_ASSERTION = "SAML_ASSERTION";
-    public static final String SAML_IDP_INITIATED_CLIENT_ID = "SAML_IDP_INITIATED_CLIENT_ID";
     public static final String SAML_AUTHN_STATEMENT = "SAML_AUTHN_STATEMENT";
     protected RealmModel realm;
     protected EventBuilder event;
@@ -299,22 +310,13 @@ public class CieIdSAMLEndpoint {
         protected Response logoutRequest(LogoutRequestType request, String relayState) {
             String brokerUserId = config.getAlias() + "." + request.getNameID().getValue();
             if (request.getSessionIndex() == null || request.getSessionIndex().isEmpty()) {
-                List<UserSessionModel> userSessions = session.sessions().getUserSessionByBrokerUserId(realm, brokerUserId);
-                for (UserSessionModel userSession : userSessions) {
-                    if (userSession.getState() == UserSessionModel.State.LOGGING_OUT || userSession.getState() == UserSessionModel.State.LOGGED_OUT) {
-                        continue;
-                    }
-
-                    for(Iterator<SamlAuthenticationPreprocessor> it = SamlSessionUtils.getSamlAuthenticationPreprocessorIterator(session); it.hasNext();) {
-                        request = it.next().beforeProcessingLogoutRequest(request, userSession, null);
-                    }
-
-                    try {
-                        AuthenticationManager.backchannelLogout(session, realm, userSession, session.getContext().getUri(), clientConnection, headers, false);
-                    } catch (Exception e) {
-                        logger.warn("failed to do backchannel logout for userSession", e);
-                    }
-                }
+                AtomicReference<LogoutRequestType> ref = new AtomicReference<>(request);
+                session.sessions().getUserSessionByBrokerUserIdStream(realm, brokerUserId)
+                        .filter(userSession -> userSession.getState() != UserSessionModel.State.LOGGING_OUT &&
+                                userSession.getState() != UserSessionModel.State.LOGGED_OUT)
+                        .collect(Collectors.toList()) // collect to avoid concurrent modification as backchannelLogout removes the user sessions.
+                        .forEach(processLogout(ref));
+                request = ref.get();
 
             }  else {
                 for (String sessionIndex : request.getSessionIndex()) {
@@ -372,6 +374,19 @@ public class CieIdSAMLEndpoint {
 
         }
 
+        private Consumer<UserSessionModel> processLogout(AtomicReference<LogoutRequestType> ref) {
+            return userSession -> {
+                for(Iterator<SamlAuthenticationPreprocessor> it = SamlSessionUtils.getSamlAuthenticationPreprocessorIterator(session); it.hasNext();) {
+                    ref.set(it.next().beforeProcessingLogoutRequest(ref.get(), userSession, null));
+                }
+                try {
+                    AuthenticationManager.backchannelLogout(session, realm, userSession, session.getContext().getUri(), clientConnection, headers, false);
+                } catch (Exception e) {
+                    logger.warn("failed to do backchannel logout for userSession", e);
+                }
+            };
+        }
+
         private String getEntityId(UriInfo uriInfo, RealmModel realm) {
             String configEntityId = config.getEntityId();
 
@@ -384,13 +399,21 @@ public class CieIdSAMLEndpoint {
         protected Response handleLoginResponse(String samlResponse, SAMLDocumentHolder holder, ResponseType responseType, String relayState, String clientId) {
 
             try {
+                AuthenticationSessionModel authSession;
+                if (clientId != null && ! clientId.trim().isEmpty()) {
+                    authSession = samlIdpInitiatedSSO(clientId);
+                } else {
+                    authSession = callback.getAndVerifyAuthenticationSession(relayState);
+                }
+                session.getContext().setAuthenticationSession(authSession);
+
                 KeyManager.ActiveRsaKey keys = session.keys().getActiveRsaKey(realm);
                 if (! isSuccessfulSamlResponse(responseType)) {
                     String statusMessage = responseType.getStatus() == null ? Messages.IDENTITY_PROVIDER_UNEXPECTED_ERROR : responseType.getStatus().getStatusMessage();
-                    return callback.error(relayState, statusMessage);
+                    return callback.error(statusMessage);
                 }
                 if (responseType.getAssertions() == null || responseType.getAssertions().isEmpty()) {
-                    return callback.error(relayState, Messages.IDENTITY_PROVIDER_UNEXPECTED_ERROR);
+                    return callback.error(Messages.IDENTITY_PROVIDER_UNEXPECTED_ERROR);
                 }
 
                 boolean assertionIsEncrypted = AssertionUtil.isAssertionEncrypted(responseType);
@@ -399,7 +422,7 @@ public class CieIdSAMLEndpoint {
                     logger.error("The assertion is not encrypted, which is required.");
                     event.event(EventType.IDENTITY_PROVIDER_RESPONSE);
                     event.error(Errors.INVALID_SAML_RESPONSE);
-                    return ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.INVALID_REQUESTER);
+                    return ErrorPage.error(session, authSession, Response.Status.BAD_REQUEST, Messages.INVALID_REQUESTER);
                 }
 
                 Element assertionElement;
@@ -422,7 +445,7 @@ public class CieIdSAMLEndpoint {
                     logger.error("validation failed");
                     event.event(EventType.IDENTITY_PROVIDER_RESPONSE);
                     event.error(Errors.INVALID_SIGNATURE);
-                    return ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.INVALID_REQUESTER);
+                    return ErrorPage.error(session, authSession, Response.Status.BAD_REQUEST, Messages.INVALID_REQUESTER);
                 }
 
                 AssertionType assertion = responseType.getAssertions().get(0).getAssertion();
@@ -433,16 +456,14 @@ public class CieIdSAMLEndpoint {
                     logger.errorf("no principal in assertion; expected: %s", expectedPrincipalType());
                     event.event(EventType.IDENTITY_PROVIDER_RESPONSE);
                     event.error(Errors.INVALID_SAML_RESPONSE);
-                    return ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.INVALID_REQUESTER);
+                    return ErrorPage.error(session, authSession, Response.Status.BAD_REQUEST, Messages.INVALID_REQUESTER);
                 }
 
                 //Map<String, String> notes = new HashMap<>();
                 BrokeredIdentityContext identity = new BrokeredIdentityContext(principal);
                 identity.getContextData().put(SAML_LOGIN_RESPONSE, responseType);
                 identity.getContextData().put(SAML_ASSERTION, assertion);
-                if (clientId != null && ! clientId.trim().isEmpty()) {
-                    identity.getContextData().put(SAML_IDP_INITIATED_CLIENT_ID, clientId);
-                }
+                identity.setAuthenticationSession(authSession);
 
                 identity.setUsername(principal);
 
@@ -471,7 +492,7 @@ public class CieIdSAMLEndpoint {
                     logger.error("Assertion expired.");
                     event.event(EventType.IDENTITY_PROVIDER_RESPONSE);
                     event.error(Errors.INVALID_SAML_RESPONSE);
-                    return ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.EXPIRED_CODE);
+                    return ErrorPage.error(session, authSession, Response.Status.BAD_REQUEST, Messages.EXPIRED_CODE);
                 }
 
                 AuthnStatementType authn = null;
@@ -495,7 +516,6 @@ public class CieIdSAMLEndpoint {
                 if (authn != null && authn.getSessionIndex() != null) {
                     identity.setBrokerSessionId(identity.getBrokerUserId() + "." + authn.getSessionIndex());
                  }
-                identity.setCode(relayState);
 
 
                 return callback.authenticated(identity);
@@ -504,6 +524,42 @@ public class CieIdSAMLEndpoint {
             } catch (Exception e) {
                 throw new IdentityBrokerException("Could not process response from SAML identity provider.", e);
             }
+        }
+
+
+        /**
+         * If there is a client whose SAML IDP-initiated SSO URL name is set to the
+         * given {@code clientUrlName}, creates a fresh authentication session for that
+         * client and returns a {@link AuthenticationSessionModel} object with that session.
+         * Otherwise returns "client not found" response.
+         *
+         * @param clientUrlName
+         * @return see description
+         */
+        private AuthenticationSessionModel samlIdpInitiatedSSO(final String clientUrlName) {
+            event.event(EventType.LOGIN);
+            CacheControlUtil.noBackButtonCacheControlHeader();
+            Optional<ClientModel> oClient = CieIdSAMLEndpoint.this.realm.getClientsStream()
+                    .filter(c -> Objects.equals(c.getAttribute(SamlProtocol.SAML_IDP_INITIATED_SSO_URL_NAME), clientUrlName))
+                    .findFirst();
+
+            if (! oClient.isPresent()) {
+                event.error(Errors.CLIENT_NOT_FOUND);
+                Response response = ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.CLIENT_NOT_FOUND);
+                throw new WebApplicationException(response);
+            }
+
+            LoginProtocolFactory factory = (LoginProtocolFactory) session.getKeycloakSessionFactory().getProviderFactory(LoginProtocol.class, SamlProtocol.LOGIN_PROTOCOL);
+            SamlService samlService = (SamlService) factory.createProtocolEndpoint(CieIdSAMLEndpoint.this.realm, event);
+            ResteasyProviderFactory.getInstance().injectProperties(samlService);
+            AuthenticationSessionModel authSession = samlService.getOrCreateLoginSessionForIdpInitiatedSso(session, CieIdSAMLEndpoint.this.realm, oClient.get(), null);
+            if (authSession == null) {
+                event.error(Errors.INVALID_REDIRECT_URI);
+                Response response = ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.INVALID_REDIRECT_URI);
+                throw new WebApplicationException(response);
+            }
+
+            return authSession;
         }
 
 
@@ -581,11 +637,6 @@ public class CieIdSAMLEndpoint {
             }
             return AuthenticationManager.finishBrowserLogout(session, realm, userSession, session.getContext().getUri(), clientConnection, headers);
         }
-
-
-
-
-
     }
 
     protected class PostBinding extends Binding {
