@@ -69,7 +69,6 @@ import org.keycloak.saml.processing.web.util.PostBindingUtil;
 import org.keycloak.services.ErrorPage;
 import org.keycloak.services.Urls;
 import org.keycloak.services.managers.AuthenticationManager;
-import org.keycloak.services.managers.ClientSessionCode;
 import org.keycloak.services.messages.Messages;
 
 import javax.ws.rs.Consumes;
@@ -416,8 +415,17 @@ public class CieIdSAMLEndpoint {
 
                 KeyManager.ActiveRsaKey keys = session.keys().getActiveRsaKey(realm);
                 if (! isSuccessfulSamlResponse(responseType)) {
-                    String statusMessage = responseType.getStatus() == null ? Messages.IDENTITY_PROVIDER_UNEXPECTED_ERROR : responseType.getStatus().getStatusMessage();
-                    return callback.error(statusMessage);
+                    // Translate CIE ID error codes to meaningful messages
+                    boolean isCieIdFault = responseType.getStatus() != null
+                        && responseType.getStatus().getStatusMessage() != null
+                        && responseType.getStatus().getStatusMessage().startsWith("ErrorCode nr");
+                    if (isCieIdFault)
+                        return callback.error("CieIdFault_" + responseType.getStatus().getStatusMessage().replace(' ', '_'));
+                    else
+                    {
+                        String statusMessage = responseType.getStatus() == null ? Messages.IDENTITY_PROVIDER_UNEXPECTED_ERROR : responseType.getStatus().getStatusMessage();
+                        return callback.error(statusMessage);
+                    }
                 }
                 if (responseType.getAssertions() == null || responseType.getAssertions().isEmpty()) {
                     return callback.error(Messages.IDENTITY_PROVIDER_UNEXPECTED_ERROR);
