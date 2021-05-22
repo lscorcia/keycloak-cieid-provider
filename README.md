@@ -13,7 +13,7 @@ Keycloak is a nice product, but still lacking on some aspects of SAML2 compatibi
 and some CIE ID requirements are not yet implemented in the main package.
 
 The main issue that this project works around is Keycloak's lack of support for 
-transient identities and for AttributeConsumingServices. Also, some of the SP behaviors 
+AttributeConsumingServices in service metadata. Also, some of the SP behaviors 
 are hardcoded to work with simple IdPs only (i.e. the SP metadata generation is 
 severely lacking). Keycloak is slowly improving on this aspect, so over time this plugin 
 will become simpler and targeted on implementing only the specific changes required by CIE ID.
@@ -32,7 +32,7 @@ As far as I know it has not been used in Production in any environment yet.
 
 Until the project gets to a stable release, it will be targeting the most recent release 
 of Keycloak as published on the website (see property `version.keycloak` in file `pom.xml`).
-Currently the main branch is targeting Keycloak 12.0.0. **Do not use this provider with previous 
+Currently the main branch is targeting Keycloak 13.0.0. **Do not use this provider with previous 
 versions of Keycloak, it won't work!**  
 
 If you are evaluating this solution, my suggestion is to test the provider by compiling Keycloak
@@ -97,7 +97,7 @@ If your problem is not mentioned there, feel free to open an issue on GitHub.
 If you are interested in Keycloak plugins for the various Italian national auth
 systems, you may be interested also in:
 
-* Keycloak SPID Provider - https://github.com/lscorcia/keycloak-spid-provider/  
+* Keycloak SPID Provider - https://github.com/italia/spid-keycloak-provider/  
 A Keycloak provider for the SPID federation
 
 * Keycloak CIE ID Provider - https://github.com/lscorcia/keycloak-cieid-provider/  

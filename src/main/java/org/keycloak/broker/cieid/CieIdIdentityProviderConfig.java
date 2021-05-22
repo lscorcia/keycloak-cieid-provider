@@ -24,6 +24,7 @@ import org.keycloak.models.IdentityProviderModel;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.protocol.saml.SamlPrincipalType;
+import org.keycloak.saml.common.constants.JBossSAMLURIConstants;
 import org.keycloak.saml.common.util.XmlKeyInfoKeyNameTransformer;
 
 public class CieIdIdentityProviderConfig extends IdentityProviderModel {
@@ -55,8 +56,9 @@ public class CieIdIdentityProviderConfig extends IdentityProviderModel {
     public static final String AUTHN_CONTEXT_CLASS_REFS = "authnContextClassRefs";
     public static final String AUTHN_CONTEXT_DECL_REFS = "authnContextDeclRefs";
     public static final String SIGN_SP_METADATA = "signSpMetadata";
+    public static final String ALLOW_CREATE = "allowCreate";
     public static final String ATTRIBUTE_CONSUMING_SERVICE_INDEX = "attributeConsumingServiceIndex";
-    public static final String ATTRIBUTE_CONSUMING_SERVICE_NAMES = "attributeConsumingServiceNames";
+    public static final String ATTRIBUTE_CONSUMING_SERVICE_NAME = "attributeConsumingServiceName";
     public static final String ORGANIZATION_NAMES = "organizationNames";
     public static final String ORGANIZATION_DISPLAY_NAMES = "organizationDisplayNames";
     public static final String ORGANIZATION_URLS = "organizationUrls";
@@ -336,6 +338,14 @@ public class CieIdIdentityProviderConfig extends IdentityProviderModel {
     public void setSignSpMetadata(boolean signSpMetadata) {
         getConfig().put(SIGN_SP_METADATA, String.valueOf(signSpMetadata));
     }
+    
+    public boolean isAllowCreate() {
+        return Boolean.valueOf(getConfig().get(ALLOW_CREATE));
+    }
+
+    public void setAllowCreated(boolean allowCreate) {
+        getConfig().put(ALLOW_CREATE, String.valueOf(allowCreate));
+    }
 
     public Integer getAttributeConsumingServiceIndex() {
         Integer result = null;
@@ -361,12 +371,12 @@ public class CieIdIdentityProviderConfig extends IdentityProviderModel {
         }
     }
 
-    public String getAttributeConsumingServiceNames() {
-        return getConfig().get(ATTRIBUTE_CONSUMING_SERVICE_NAMES);
+    public void setAttributeConsumingServiceName(String attributeConsumingServiceName) {
+        getConfig().put(ATTRIBUTE_CONSUMING_SERVICE_NAME, attributeConsumingServiceName);
     }
 
-    public void setAttributeConsumingServiceNames(String attributeConsumingServiceNames) {
-        getConfig().put(ATTRIBUTE_CONSUMING_SERVICE_NAMES, attributeConsumingServiceNames);
+    public String getAttributeConsumingServiceName() {
+        return getConfig().get(ATTRIBUTE_CONSUMING_SERVICE_NAME);
     }
 
     public String getOrganizationNames() {
@@ -399,5 +409,9 @@ public class CieIdIdentityProviderConfig extends IdentityProviderModel {
 
         checkUrl(sslRequired, getSingleLogoutServiceUrl(), SINGLE_LOGOUT_SERVICE_URL);
         checkUrl(sslRequired, getSingleSignOnServiceUrl(), SINGLE_SIGN_ON_SERVICE_URL);
+        //transient name id format is not accepted together with principaltype SubjectnameId
+        if (JBossSAMLURIConstants.NAMEID_FORMAT_TRANSIENT.get().equals(getNameIDPolicyFormat()) && SamlPrincipalType.SUBJECT == getPrincipalType())
+            throw new IllegalArgumentException("Can not have Transient NameID Policy Format together with SUBJECT Principal Type");
+        
     }
 }

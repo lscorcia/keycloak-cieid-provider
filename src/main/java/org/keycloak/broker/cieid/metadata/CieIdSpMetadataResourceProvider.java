@@ -41,6 +41,7 @@ import org.keycloak.saml.SPMetadataDescriptor;
 import org.keycloak.saml.common.constants.JBossSAMLURIConstants;
 import org.keycloak.saml.common.util.DocumentUtil;
 import org.keycloak.saml.common.util.StaxUtil;
+import org.keycloak.saml.common.exceptions.ConfigurationException;
 import org.keycloak.saml.common.exceptions.ProcessingException;
 import org.keycloak.saml.processing.core.saml.v2.common.IDGenerator;
 import org.keycloak.saml.processing.core.saml.v2.writers.SAMLMetadataWriter;
@@ -163,8 +164,8 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
                 .map(t -> t.getConfig().get(CieIdUserAttributeMapper.ATTRIBUTE_NAME))
                 .collect(Collectors.toList());
 
-            String strAttributeConsumingServiceNames = firstCieIdProvider.getConfig().getAttributeConsumingServiceNames();
-            String[] attributeConsumingServiceNames = strAttributeConsumingServiceNames != null ? strAttributeConsumingServiceNames.split(","): null;
+            String strAttributeConsumingServiceName = firstCieIdProvider.getConfig().getAttributeConsumingServiceName();
+            String[] attributeConsumingServiceNames = strAttributeConsumingServiceName != null ? strAttributeConsumingServiceName.split(","): null;
 
             String strOrganizationNames = firstCieIdProvider.getConfig().getOrganizationNames();
             String[] organizationNames = strOrganizationNames != null ? strOrganizationNames.split(","): null;
@@ -175,18 +176,25 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
             String strOrganizationUrls = firstCieIdProvider.getConfig().getOrganizationUrls();
             String[] organizationUrls = strOrganizationUrls != null ? strOrganizationUrls.split(","): null;
 
-            String descriptor = getSPDescriptor(authnBinding, assertionEndpoints, logoutEndpoints,
+            EntityDescriptorType entityDescriptor = buildSPDescriptor(authnBinding, authnBinding, assertionEndpoints, logoutEndpoints,
               wantAuthnRequestsSigned, wantAssertionsSigned, wantAssertionsEncrypted,
               entityId, nameIDPolicyFormat, signingKeys, encryptionKeys,
               attributeConsumingServiceIndex, attributeConsumingServiceNames, requestedAttributeNames,
               organizationNames, organizationDisplayNames, organizationUrls);
+
+            StringWriter sw = new StringWriter();
+            XMLStreamWriter writer = StaxUtil.getXMLStreamWriter(sw);
+            SAMLMetadataWriter metadataWriter = new SAMLMetadataWriter(writer);
+            metadataWriter.writeEntityDescriptor(entityDescriptor);
+
+            String strDescriptor = sw.toString();
 
             if (firstCieIdProvider.getConfig().isSignSpMetadata()) {
                 KeyManager.ActiveRsaKey activeKey = session.keys().getActiveRsaKey(realm);
                 String keyName = firstCieIdProvider.getConfig().getXmlSigKeyInfoKeyNameTransformer().getKeyName(activeKey.getKid(), activeKey.getCertificate());
                 KeyPair keyPair = new KeyPair(activeKey.getPublicKey(), activeKey.getPrivateKey());
 
-                Document metadataDocument = DocumentUtil.getDocument(descriptor);
+                Document metadataDocument = DocumentUtil.getDocument(strDescriptor);
                 SAML2Signature signatureHelper = new SAML2Signature();
                 signatureHelper.setSignatureMethod(firstCieIdProvider.getSignatureAlgorithm().getXmlSignatureMethod());
                 signatureHelper.setDigestMethod(firstCieIdProvider.getSignatureAlgorithm().getXmlSignatureDigestMethod());
@@ -196,10 +204,10 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
 
                 signatureHelper.signSAMLDocument(metadataDocument, keyName, keyPair, CanonicalizationMethod.EXCLUSIVE);
 
-                descriptor = DocumentUtil.getDocumentAsString(metadataDocument);
+                strDescriptor = DocumentUtil.getDocumentAsString(metadataDocument);
             }
 
-            return Response.ok(descriptor, MediaType.APPLICATION_XML_TYPE).build();
+            return Response.ok(strDescriptor, MediaType.APPLICATION_XML_TYPE).build();
         } catch (Exception e) {
             logger.warn("Failed to export SAML SP Metadata!", e);
             throw new RuntimeException(e);
@@ -213,17 +221,13 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
             return configEntityId;
     }
 
-    private static String getSPDescriptor(URI binding, List<URI> assertionEndpoints, List<URI> logoutEndpoints,
+    private static EntityDescriptorType buildSPDescriptor(URI loginBinding, URI logoutBinding, List<URI> assertionEndpoints, List<URI> logoutEndpoints,
         boolean wantAuthnRequestsSigned, boolean wantAssertionsSigned, boolean wantAssertionsEncrypted,
         String entityId, String nameIDPolicyFormat, List<Element> signingCerts, List<Element> encryptionCerts,
         Integer attributeConsumingServiceIndex, String[] attributeConsumingServiceNames, List<String> requestedAttributeNames,
         String[] organizationNames, String[] organizationDisplayNames, String[] organizationUrls) 
-        throws XMLStreamException, ProcessingException, ParserConfigurationException
+        throws XMLStreamException, ProcessingException, ParserConfigurationException, ConfigurationException
     {
-        StringWriter sw = new StringWriter();
-        XMLStreamWriter writer = StaxUtil.getXMLStreamWriter(sw);
-        SAMLMetadataWriter metadataWriter = new SAMLMetadataWriter(writer);
-
         EntityDescriptorType entityDescriptor = new EntityDescriptorType(entityId);
         entityDescriptor.setID(IDGenerator.create("ID_"));
 
@@ -254,13 +258,13 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
 
         // SingleLogoutService
         for (URI logoutEndpoint: logoutEndpoints)
-            spSSODescriptor.addSingleLogoutService(new EndpointType(binding, logoutEndpoint));
+            spSSODescriptor.addSingleLogoutService(new EndpointType(logoutBinding, logoutEndpoint));
 
         // AssertionConsumerService
         int assertionEndpointIndex = 0;
         for (URI assertionEndpoint: assertionEndpoints)
         {
-            IndexedEndpointType assertionConsumerEndpoint = new IndexedEndpointType(binding, assertionEndpoint);
+            IndexedEndpointType assertionConsumerEndpoint = new IndexedEndpointType(loginBinding, assertionEndpoint);
             if (assertionEndpointIndex == 0) assertionConsumerEndpoint.setIsDefault(true);
             assertionConsumerEndpoint.setIndex(assertionEndpointIndex);
 
@@ -345,9 +349,7 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
             entityDescriptor.setOrganization(organizationType);
         }
 
-        metadataWriter.writeEntityDescriptor(entityDescriptor);
-
-        return sw.toString();
+        return entityDescriptor;
     }
 
     @Override

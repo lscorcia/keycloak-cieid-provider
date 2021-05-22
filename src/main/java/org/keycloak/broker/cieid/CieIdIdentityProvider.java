@@ -24,6 +24,7 @@ import org.keycloak.broker.provider.IdentityBrokerException;
 import org.keycloak.broker.provider.IdentityProviderDataMarshaller;
 import org.keycloak.broker.provider.util.SimpleHttp;
 import org.keycloak.broker.saml.SAMLDataMarshaller;
+import org.keycloak.broker.saml.mappers.UserAttributeMapper;
 import org.keycloak.common.util.PemUtils;
 import org.keycloak.crypto.Algorithm;
 import org.keycloak.crypto.KeyStatus;
@@ -37,6 +38,7 @@ import org.keycloak.dom.saml.v2.protocol.LogoutRequestType;
 import org.keycloak.dom.saml.v2.protocol.ResponseType;
 import org.keycloak.events.EventBuilder;
 import org.keycloak.models.FederatedIdentityModel;
+import org.keycloak.models.IdentityProviderMapperModel;
 import org.keycloak.models.KeyManager;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
@@ -75,6 +77,7 @@ import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 import javax.xml.crypto.dsig.CanonicalizationMethod;
 import javax.xml.parsers.ParserConfigurationException;
+import java.util.stream.Collectors;
 import java.net.URI;
 import java.security.KeyPair;
 import java.util.Arrays;
@@ -135,6 +138,9 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
             Integer attributeConsumingServiceIndex = getConfig().getAttributeConsumingServiceIndex();
 
             String loginHint = getConfig().isLoginHint() ? request.getAuthenticationSession().getClientNote(OIDCLoginProtocol.LOGIN_HINT_PARAM) : null;
+            Boolean allowCreate = null;
+            if (getConfig().getConfig().get(CieIdIdentityProviderConfig.ALLOW_CREATE) == null || getConfig().isAllowCreate())
+                allowCreate = Boolean.TRUE;
             CieIdSAML2AuthnRequestBuilder authnRequestBuilder = new CieIdSAML2AuthnRequestBuilder()
                     .assertionConsumerUrl(assertionConsumerServiceUrl)
                     .destination(destinationUrl)
@@ -148,7 +154,7 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
                     .protocolBinding(protocolBinding)
                     .nameIdPolicy(SAML2NameIDPolicyBuilder
                         .format(nameIDPolicyFormat)
-                        .setAllowCreate(Boolean.TRUE))
+                        .setAllowCreate(allowCreate))
                     .attributeConsumingServiceIndex(attributeConsumingServiceIndex)
                     .requestedAuthnContext(requestedAuthnContext)
                     .subject(loginHint);
@@ -349,12 +355,17 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
                     .path("endpoint")
                     .build();
 
-
             boolean wantAuthnRequestsSigned = getConfig().isWantAuthnRequestsSigned();
             boolean wantAssertionsSigned = getConfig().isWantAssertionsSigned();
             boolean wantAssertionsEncrypted = getConfig().isWantAssertionsEncrypted();
             String entityId = getEntityId(uriInfo, realm);
             String nameIDPolicyFormat = getConfig().getNameIDPolicyFormat();
+            int attributeConsumingServiceIndex = getConfig().getAttributeConsumingServiceIndex() != null ? getConfig().getAttributeConsumingServiceIndex(): 1;
+            String attributeConsumingServiceName = getConfig().getAttributeConsumingServiceName();
+            List<IdentityProviderMapperModel> lstAttributeMappers = realm.getIdentityProviderMappersByAlias(getConfig().getAlias())
+                .stream()
+                .filter(t -> t.getIdentityProviderMapper().equals(UserAttributeMapper.PROVIDER_ID))
+                .collect(Collectors.toList());
 
             List<Element> signingKeys = new LinkedList<>();
             List<Element> encryptionKeys = new LinkedList<>();
@@ -378,9 +389,11 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
                         }
                     });
 
-            String descriptor = SPMetadataDescriptor.getSPDescriptor(authnBinding, endpoint, endpoint,
-              wantAuthnRequestsSigned, wantAssertionsSigned, wantAssertionsEncrypted,
-              entityId, nameIDPolicyFormat, signingKeys, encryptionKeys);
+            // Prepare the metadata descriptor model
+            String descriptor = SPMetadataDescriptor.getSPDescriptor(
+                authnBinding, endpoint, endpoint,
+                wantAuthnRequestsSigned, wantAssertionsSigned, wantAssertionsEncrypted,
+                entityId, nameIDPolicyFormat, signingKeys, encryptionKeys);
 
             // Metadata signing
             if (getConfig().isSignSpMetadata())
