@@ -110,6 +110,7 @@ import org.keycloak.saml.validators.DestinationValidator;
 import org.keycloak.services.util.CacheControlUtil;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
 import java.net.URI;
@@ -440,6 +441,17 @@ public class CieIdSAMLEndpoint {
                     /* We verify the assertion using original document to handle cases where the IdP
                     includes whitespace and/or newlines inside tags. */
                     assertionElement = DocumentUtil.getElement(holder.getSamlDocument(), new QName(JBossSAMLConstants.ASSERTION.get()));
+                }
+
+                // Apply CIE ID-specific response validation rules
+                String expectedRequestId = authSession.getClientNote(SamlProtocol.SAML_REQUEST_ID);
+                String cieIdResponseValidationError = verifyCieIdResponse(holder.getSamlDocument().getDocumentElement(), assertionElement, expectedRequestId);
+                if (cieIdResponseValidationError != null)
+                {
+                    logger.error("CIE ID Response Validation Error: " + cieIdResponseValidationError);
+                    event.event(EventType.IDENTITY_PROVIDER_RESPONSE);
+                    event.error(Errors.INVALID_SAML_RESPONSE);
+                    return callback.error(cieIdResponseValidationError);
                 }
 
                 boolean signed = AssertionUtil.isSignedElement(assertionElement);
@@ -781,5 +793,40 @@ public class CieIdSAMLEndpoint {
         SubjectType subject = assertion.getSubject();
         SubjectType.STSubType subType = subject.getSubType();
         return subType != null ? (NameIDType) subType.getBaseID() : null;
+    }
+
+    private String verifyCieIdResponse(Element documentElement, Element assertionElement, String expectedRequestId) {
+        // 17: Response > InResponseTo missing
+        if (!documentElement.hasAttribute("InResponseTo")) {
+            return "CieIdSamlCheck_nr17";
+        }
+
+        // 16: Response > InResponseTo empty
+        String responseInResponseToValue = documentElement.getAttribute("InResponseTo");
+        if (responseInResponseToValue.isEmpty()) {
+            return "CieIdSamlCheck_nr16";
+        }
+
+        // 18: Response > InResponseTo does not match request ID
+        if (!responseInResponseToValue.equals(expectedRequestId)) {
+            return "CieIdSamlCheck_nr18";
+        }
+
+        return null;
+    }
+
+    private boolean hasNamedChild(Element element)
+    {
+        NodeList childNodes = element.getChildNodes();
+        if (childNodes == null) return false;
+
+        for (int i = 0; i < childNodes.getLength(); ++i)
+        {
+            Node node = childNodes.item(i);
+            if (node.getNodeType() ==  Node.ELEMENT_NODE && node.getNodeName() != null)
+                return true;
+        }
+
+        return false;
     }
 }
