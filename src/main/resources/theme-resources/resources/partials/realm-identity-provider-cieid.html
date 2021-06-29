@@ -343,6 +343,153 @@
                 </div>
                 <kc-tooltip>{{:: 'identity-provider.cieid.organization-urls.tooltip' | translate}}</kc-tooltip>
             </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="isSpPrivate">{{:: 'identity-provider.cieid.is-sp-private' | translate}}</label>
+                <div class="col-md-6">
+                    <input ng-model="identityProvider.config.administrativeContactIsSpPrivate" id="isSpPrivate" name="isSpPrivate" onoffswitchvalue on-text="{{:: 'onText' | translate}}" off-text="{{:: 'offText' | translate}}" />
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.is-sp-private.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group" data-ng-show="identityProvider.config.administrativeContactIsSpPrivate != 'true'">
+                <label class="col-md-2 control-label" for="ipaCode">{{:: 'identity-provider.cieid.ipaCode' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="ipaCode" type="text" ng-model="identityProvider.config.administrativeContactIpaCode"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.ipaCode.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group" data-ng-show="identityProvider.config.administrativeContactIsSpPrivate != 'true'">
+                <label class="col-md-2 control-label" for="ipaCategory">{{:: 'identity-provider.cieid.ipaCategory' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="ipaCategory" type="text" ng-model="identityProvider.config.administrativeContactIpaCategory"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.ipaCategory.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="administrativeContactCompany">{{:: 'identity-provider.cieid.contactCompany.administrative' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="administrativeContactCompany" type="text" ng-model="identityProvider.config.administrativeContactCompany"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.contactCompany.administrative.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="administrativeContactVatNumber">{{:: 'identity-provider.cieid.vatNumber.administrative' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="administrativeContactVatNumber" type="text" ng-model="identityProvider.config.administrativeContactVatNumber"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.vatNumber.administrative.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="administrativeContactFiscalCode">{{:: 'identity-provider.cieid.fiscalCode.administrative' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="administrativeContactFiscalCode" type="text" ng-model="identityProvider.config.administrativeContactFiscalCode"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.fiscalCode.administrative.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="administrativeContactNace2Codes">{{:: 'identity-provider.cieid.nace2codes.administrative' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="administrativeContactNace2Codes" type="text" ng-model="identityProvider.config.administrativeContactNace2Codes"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.nace2codes.administrative.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="administrativeContactMunicipality">{{:: 'identity-provider.cieid.municipality.administrative' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="administrativeContactMunicipality" type="text" ng-model="identityProvider.config.administrativeContactMunicipality"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.municipality.administrative.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="administrativeContactProvince">{{:: 'identity-provider.cieid.province.administrative' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="administrativeContactProvince" type="text" ng-model="identityProvider.config.administrativeContactProvince"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.province.administrative.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="administrativeContactCountry">{{:: 'identity-provider.cieid.country.administrative' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="administrativeContactCountry" type="text" ng-model="identityProvider.config.administrativeContactCountry"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.country.administrative.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="administrativeContactPhone">{{:: 'identity-provider.cieid.contactPhone.administrative' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="administrativeContactPhone" type="text" ng-model="identityProvider.config.administrativeContactPhone"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.contactPhone.administrative.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="administrativeContactEmail">{{:: 'identity-provider.cieid.contactEmail.administrative' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="administrativeContactEmail" type="text" ng-model="identityProvider.config.administrativeContactEmail"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.contactEmail.administrative.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="technicalContactCompany">{{:: 'identity-provider.cieid.contactCompany.technical' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="technicalContactCompany" type="text" ng-model="identityProvider.config.technicalContactCompany"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.contactCompany.technical.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="technicalContactVatNumber">{{:: 'identity-provider.cieid.vatNumber.technical' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="technicalContactVatNumber" type="text" ng-model="identityProvider.config.technicalContactVatNumber"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.vatNumber.technical.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="technicalContactFiscalCode">{{:: 'identity-provider.cieid.fiscalCode.technical' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="technicalContactFiscalCode" type="text" ng-model="identityProvider.config.technicalContactFiscalCode"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.fiscalCode.technical.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="technicalContactNace2Codes">{{:: 'identity-provider.cieid.nace2codes.technical' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="technicalContactNace2Codes" type="text" ng-model="identityProvider.config.technicalContactNace2Codes"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.nace2codes.technical.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="technicalContactMunicipality">{{:: 'identity-provider.cieid.municipality.technical' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="technicalContactMunicipality" type="text" ng-model="identityProvider.config.technicalContactMunicipality"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.municipality.technical.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="technicalContactProvince">{{:: 'identity-provider.cieid.province.technical' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="technicalContactProvince" type="text" ng-model="identityProvider.config.technicalContactProvince"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.province.technical.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="technicalContactCountry">{{:: 'identity-provider.cieid.country.technical' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="technicalContactCountry" type="text" ng-model="identityProvider.config.technicalContactCountry"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.country.technical.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="technicalContactPhone">{{:: 'identity-provider.cieid.contactPhone.technical' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="technicalContactPhone" type="text" ng-model="identityProvider.config.technicalContactPhone"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.contactPhone.technical.tooltip' | translate}}</kc-tooltip>
+            </div>
+            <div class="form-group">
+                <label class="col-md-2 control-label" for="technicalContactEmail">{{:: 'identity-provider.cieid.contactEmail.technical' | translate}}</label>
+                <div class="col-md-6">
+                    <input class="form-control" id="technicalContactEmail" type="text" ng-model="identityProvider.config.technicalContactEmail"/>
+                </div>
+                <kc-tooltip>{{:: 'identity-provider.cieid.contactEmail.technical.tooltip' | translate}}</kc-tooltip>
+            </div>
         </fieldset>
         <fieldset>
             <legend collapsed><span class="text">{{:: 'identity-provider.saml.requested-authncontext' | translate}}</span> <kc-tooltip>{{:: 'identity-provider.saml.requested-authncontext.tooltip' | translate}}</kc-tooltip></legend>

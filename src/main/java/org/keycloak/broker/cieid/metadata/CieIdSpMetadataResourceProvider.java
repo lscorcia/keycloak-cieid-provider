@@ -15,14 +15,15 @@
 package org.keycloak.broker.cieid.metadata;
 
 import org.jboss.logging.Logger;
-import org.keycloak.broker.cieid.CieIdIdentityProvider;
-import org.keycloak.broker.cieid.CieIdIdentityProviderFactory;
-import org.keycloak.broker.cieid.mappers.CieIdUserAttributeMapper;
+
 import org.keycloak.common.util.PemUtils;
 import org.keycloak.crypto.KeyStatus;
 import org.keycloak.dom.saml.v2.metadata.AttributeConsumingServiceType;
+import org.keycloak.dom.saml.v2.metadata.ContactType;
+import org.keycloak.dom.saml.v2.metadata.ContactTypeType;
 import org.keycloak.dom.saml.v2.metadata.EndpointType;
 import org.keycloak.dom.saml.v2.metadata.EntityDescriptorType;
+import org.keycloak.dom.saml.v2.metadata.ExtensionsType;
 import org.keycloak.dom.saml.v2.metadata.IndexedEndpointType;
 import org.keycloak.dom.saml.v2.metadata.KeyDescriptorType;
 import org.keycloak.dom.saml.v2.metadata.KeyTypes;
@@ -41,6 +42,7 @@ import org.keycloak.saml.SPMetadataDescriptor;
 import org.keycloak.saml.common.constants.JBossSAMLURIConstants;
 import org.keycloak.saml.common.util.DocumentUtil;
 import org.keycloak.saml.common.util.StaxUtil;
+import org.keycloak.saml.common.util.StringUtil;
 import org.keycloak.saml.common.exceptions.ConfigurationException;
 import org.keycloak.saml.common.exceptions.ProcessingException;
 import org.keycloak.saml.processing.core.saml.v2.common.IDGenerator;
@@ -75,11 +77,18 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
+import org.keycloak.broker.cieid.CieIdIdentityProvider;
+import org.keycloak.broker.cieid.CieIdIdentityProviderFactory;
+import org.keycloak.broker.cieid.mappers.CieIdUserAttributeMapper;
+
 import static org.keycloak.saml.common.constants.JBossSAMLURIConstants.ATTRIBUTE_FORMAT_BASIC;
 import static org.keycloak.saml.common.constants.JBossSAMLURIConstants.PROTOCOL_NSURI;
 
 public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
     protected static final Logger logger = Logger.getLogger(CieIdSpMetadataResourceProvider.class);
+
+    public static final String XMLNS_NS = "http://www.w3.org/2000/xmlns/";
+    public static final String CIEID_METADATA_EXTENSIONS_NS = "https://www.cartaidentita.interno.gov.it/saml-extensions";
 
     private KeycloakSession session;
 
@@ -176,11 +185,42 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
             String strOrganizationUrls = firstCieIdProvider.getConfig().getOrganizationUrls();
             String[] organizationUrls = strOrganizationUrls != null ? strOrganizationUrls.split(","): null;
 
+            boolean isSpPrivate = firstCieIdProvider.getConfig().isSpPrivate();
+            String ipaCode = firstCieIdProvider.getConfig().getIpaCode();
+            String ipaCategory = firstCieIdProvider.getConfig().getIpaCategory();
+            String administrativeContactCompany = firstCieIdProvider.getConfig().getAdministrativeContactCompany();
+            String administrativeContactVatNumber = firstCieIdProvider.getConfig().getAdministrativeContactVatNumber();
+            String administrativeContactFiscalCode = firstCieIdProvider.getConfig().getAdministrativeContactFiscalCode();
+            String administrativeContactEmail = firstCieIdProvider.getConfig().getAdministrativeContactEmail();
+            String administrativeContactPhone = firstCieIdProvider.getConfig().getAdministrativeContactPhone();
+            String strAdministrativeContactNace2Codes = firstCieIdProvider.getConfig().getAdministrativeContactNace2Codes();
+            String[] administrativeContactNace2Codes = strAdministrativeContactNace2Codes != null ? strAdministrativeContactNace2Codes.split(","): null;
+            String administrativeContactMunicipality = firstCieIdProvider.getConfig().getAdministrativeContactMunicipality();
+            String administrativeContactProvince = firstCieIdProvider.getConfig().getAdministrativeContactProvince();
+            String administrativeContactCountry = firstCieIdProvider.getConfig().getAdministrativeContactCountry();
+            String technicalContactCompany = firstCieIdProvider.getConfig().getTechnicalContactCompany();
+            String technicalContactVatNumber = firstCieIdProvider.getConfig().getTechnicalContactVatNumber();
+            String technicalContactFiscalCode = firstCieIdProvider.getConfig().getTechnicalContactFiscalCode();
+            String technicalContactEmail = firstCieIdProvider.getConfig().getTechnicalContactEmail(); 
+            String technicalContactPhone = firstCieIdProvider.getConfig().getTechnicalContactPhone();
+            String strTechnicalContactNace2Codes = firstCieIdProvider.getConfig().getTechnicalContactNace2Codes();
+            String[] technicalContactNace2Codes = strTechnicalContactNace2Codes!= null ? strTechnicalContactNace2Codes.split(","): null;
+            String technicalContactMunicipality = firstCieIdProvider.getConfig().getTechnicalContactMunicipality();
+            String technicalContactProvince = firstCieIdProvider.getConfig().getTechnicalContactProvince();
+            String technicalContactCountry = firstCieIdProvider.getConfig().getTechnicalContactCountry();
+
             EntityDescriptorType entityDescriptor = buildSPDescriptor(authnBinding, authnBinding, assertionEndpoints, logoutEndpoints,
               wantAuthnRequestsSigned, wantAssertionsSigned, wantAssertionsEncrypted,
               entityId, nameIDPolicyFormat, signingKeys, encryptionKeys,
               attributeConsumingServiceIndex, attributeConsumingServiceNames, requestedAttributeNames,
-              organizationNames, organizationDisplayNames, organizationUrls);
+              organizationNames, organizationDisplayNames, organizationUrls,
+              isSpPrivate, ipaCode, ipaCategory,
+              administrativeContactCompany, administrativeContactVatNumber, administrativeContactFiscalCode,
+              administrativeContactEmail, administrativeContactPhone, administrativeContactNace2Codes,
+              administrativeContactMunicipality, administrativeContactProvince, administrativeContactCountry,
+              technicalContactCompany, technicalContactVatNumber, technicalContactFiscalCode, 
+              technicalContactEmail, technicalContactPhone, technicalContactNace2Codes,
+              technicalContactMunicipality, technicalContactProvince, technicalContactCountry);
 
             StringWriter sw = new StringWriter();
             XMLStreamWriter writer = StaxUtil.getXMLStreamWriter(sw);
@@ -225,7 +265,14 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
         boolean wantAuthnRequestsSigned, boolean wantAssertionsSigned, boolean wantAssertionsEncrypted,
         String entityId, String nameIDPolicyFormat, List<Element> signingCerts, List<Element> encryptionCerts,
         Integer attributeConsumingServiceIndex, String[] attributeConsumingServiceNames, List<String> requestedAttributeNames,
-        String[] organizationNames, String[] organizationDisplayNames, String[] organizationUrls) 
+        String[] organizationNames, String[] organizationDisplayNames, String[] organizationUrls,
+        boolean isSpPrivate, String ipaCode, String ipaCategory,
+        String administrativeContactCompany, String administrativeContactVatNumber, String administrativeContactFiscalCode,
+        String administrativeContactEmail, String administrativeContactPhone, String[] administrativeContactNace2Codes,
+        String administrativeContactMunicipality, String administrativeContactProvince, String administrativeContactCountry,
+        String technicalContactCompany, String technicalContactVatNumber, String technicalContactFiscalCode,
+        String technicalContactEmail, String technicalContactPhone, String[] technicalContactNace2Codes,
+        String technicalContactMunicipality, String technicalContactProvince, String technicalContactCountry) 
         throws XMLStreamException, ProcessingException, ParserConfigurationException, ConfigurationException
     {
         EntityDescriptorType entityDescriptor = new EntityDescriptorType(entityId);
@@ -344,6 +391,196 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
                     } catch (URISyntaxException e) { logger.error("Error creating URI for Organization URL"); continue; };
                     organizationType.addOrganizationURL(organizationUrl);
                 }
+            }
+
+            // ContactPerson type=ADMINISTRATIVE
+            if (!StringUtil.isNullOrEmpty(administrativeContactCompany) || 
+                !StringUtil.isNullOrEmpty(administrativeContactEmail) || 
+                !StringUtil.isNullOrEmpty(administrativeContactPhone)) 
+            {
+                ContactType administrativeContactPerson = new ContactType(ContactTypeType.ADMINISTRATIVE);
+
+                if (!StringUtil.isNullOrEmpty(administrativeContactCompany)) administrativeContactPerson.setCompany(administrativeContactCompany);
+                if (!StringUtil.isNullOrEmpty(administrativeContactEmail)) administrativeContactPerson.addEmailAddress(administrativeContactEmail);
+                if (!StringUtil.isNullOrEmpty(administrativeContactPhone)) administrativeContactPerson.addTelephone(administrativeContactPhone);
+
+                // Extensions
+                if (administrativeContactPerson.getExtensions() == null)
+                administrativeContactPerson.setExtensions(new ExtensionsType());
+
+                Document doc = DocumentUtil.createDocument();
+
+                if (!isSpPrivate)
+                {
+                    // Public SP Extensions
+						
+                    // Public qualifier
+                    Element spTypeElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:Public");
+                    spTypeElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                    administrativeContactPerson.getExtensions().addExtension(spTypeElement);
+
+                    // IPA Code
+                    if (!StringUtil.isNullOrEmpty(ipaCode))
+                    {
+                        Element ipaCodeElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:IPACode");
+                        ipaCodeElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                        ipaCodeElement.setTextContent(ipaCode);
+                        administrativeContactPerson.getExtensions().addExtension(ipaCodeElement);
+                    }
+
+                    // IPA Category
+                    if (!StringUtil.isNullOrEmpty(ipaCategory))
+                    {
+                        Element ipaCategoryElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:IPACategory");
+                        ipaCategoryElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                        ipaCategoryElement.setTextContent(ipaCategory);
+                        administrativeContactPerson.getExtensions().addExtension(ipaCategoryElement);
+                    }
+                }
+                else
+                {
+                    // Private SP Extensions
+					
+                    // Private qualifier
+                    Element spTypeElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:Private");
+                    spTypeElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                    administrativeContactPerson.getExtensions().addExtension(spTypeElement);
+                }
+
+                // VAT Number
+                if (!StringUtil.isNullOrEmpty(administrativeContactVatNumber))
+                {
+                    Element vatNumberElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:VATNumber");
+                    vatNumberElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                    vatNumberElement.setTextContent(administrativeContactVatNumber);
+                    administrativeContactPerson.getExtensions().addExtension(vatNumberElement);
+                }
+
+                // Fiscal Code	
+                if (!StringUtil.isNullOrEmpty(administrativeContactFiscalCode))
+                {
+                    Element fiscalCodeElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:FiscalCode");
+                    fiscalCodeElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                    fiscalCodeElement.setTextContent(administrativeContactFiscalCode);
+                    administrativeContactPerson.getExtensions().addExtension(fiscalCodeElement);
+                }
+
+                // NACE2 Codes
+                if (administrativeContactNace2Codes != null && administrativeContactNace2Codes.length > 0)
+                {
+                    for (String naceCode : administrativeContactNace2Codes)
+                    {
+                        Element naceCodeElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:NACE2Code");
+                        naceCodeElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                        naceCodeElement.setTextContent(naceCode);
+                        administrativeContactPerson.getExtensions().addExtension(naceCodeElement);
+                    }
+                }
+
+                // Municipality
+                if (!StringUtil.isNullOrEmpty(administrativeContactMunicipality))
+                {
+                    Element municipalityElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:Municipality");
+                    municipalityElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                    municipalityElement.setTextContent(administrativeContactMunicipality);
+                    administrativeContactPerson.getExtensions().addExtension(municipalityElement);
+                }
+
+                // Province	
+                if (!StringUtil.isNullOrEmpty(administrativeContactProvince))
+                {
+                    Element provinceElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:Province");
+                    provinceElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                    provinceElement.setTextContent(administrativeContactProvince);
+                    administrativeContactPerson.getExtensions().addExtension(provinceElement);
+                }
+
+                // Country
+                if (!StringUtil.isNullOrEmpty(administrativeContactCountry))
+                {
+                    Element countryElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:Country");
+                    countryElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                    countryElement.setTextContent(administrativeContactCountry);
+                    administrativeContactPerson.getExtensions().addExtension(countryElement);
+                }
+
+                entityDescriptor.addContactPerson(administrativeContactPerson);
+            }
+
+            // ContactPerson type=TECHNICAL
+            if (!StringUtil.isNullOrEmpty(technicalContactCompany) || 
+                !StringUtil.isNullOrEmpty(technicalContactEmail) || 
+                !StringUtil.isNullOrEmpty(technicalContactPhone)) {
+                ContactType technicalContactPerson = new ContactType(ContactTypeType.TECHNICAL);
+
+                if (!StringUtil.isNullOrEmpty(technicalContactCompany)) technicalContactPerson.setCompany(technicalContactCompany);
+                if (!StringUtil.isNullOrEmpty(technicalContactEmail)) technicalContactPerson.addEmailAddress(technicalContactEmail);
+                if (!StringUtil.isNullOrEmpty(technicalContactPhone)) technicalContactPerson.addTelephone(technicalContactPhone);
+
+                // Extensions
+                if (technicalContactPerson.getExtensions() == null)
+                technicalContactPerson.setExtensions(new ExtensionsType());
+
+                Document doc = DocumentUtil.createDocument();
+
+                // VAT Number
+                if (!StringUtil.isNullOrEmpty(technicalContactVatNumber))
+                {
+                    Element vatNumberElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:VATNumber");
+                    vatNumberElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                    vatNumberElement.setTextContent(technicalContactVatNumber);
+                    technicalContactPerson.getExtensions().addExtension(vatNumberElement);
+                }
+
+                // Fiscal Code	
+                if (!StringUtil.isNullOrEmpty(technicalContactFiscalCode))
+                {
+                    Element fiscalCodeElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:FiscalCode");
+                    fiscalCodeElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                    fiscalCodeElement.setTextContent(technicalContactFiscalCode);
+                    technicalContactPerson.getExtensions().addExtension(fiscalCodeElement);
+                }
+
+                // NACE2 Codes
+                if (technicalContactNace2Codes != null && technicalContactNace2Codes.length > 0)
+                {
+                    for (String naceCode : technicalContactNace2Codes)
+                    {
+                        Element naceCodeElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:NACE2Code");
+                        naceCodeElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                        naceCodeElement.setTextContent(naceCode);
+                        technicalContactPerson.getExtensions().addExtension(naceCodeElement);
+                    }
+                }
+
+                // Municipality
+                if (!StringUtil.isNullOrEmpty(technicalContactMunicipality))
+                {
+                    Element municipalityElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:Municipality");
+                    municipalityElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                    municipalityElement.setTextContent(technicalContactMunicipality);
+                    technicalContactPerson.getExtensions().addExtension(municipalityElement);
+                }
+
+                // Province	
+                if (!StringUtil.isNullOrEmpty(technicalContactProvince))
+                {
+                    Element provinceElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:Province");
+                    provinceElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                    provinceElement.setTextContent(technicalContactProvince);
+                    technicalContactPerson.getExtensions().addExtension(provinceElement);
+                }
+
+                // Country
+                if (!StringUtil.isNullOrEmpty(technicalContactCountry))
+                {
+                    Element countryElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:Country");
+                    countryElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                    countryElement.setTextContent(technicalContactCountry);
+                    technicalContactPerson.getExtensions().addExtension(countryElement);
+                }
+
+                entityDescriptor.addContactPerson(technicalContactPerson);
             }
 
             entityDescriptor.setOrganization(organizationType);
