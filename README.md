@@ -10,13 +10,12 @@ Italian CIE ID authentication provider for Keycloak (https://www.keycloak.org/)
 This custom authentication provider for Keycloak enables easy integration of CIE ID 
 with existing applications by leveraging Keycloak identity brokering features.
 Keycloak is a nice product, but still lacking on some aspects of SAML2 compatibility,
-and some CIE ID requirements are not yet implemented in the main package.
+and the CIE ID specifications deviate from the SAML2 standard in some key aspects.
 
-The main issue that this project works around is Keycloak's lack of support for 
-AttributeConsumingServices in service metadata. Also, some of the SP behaviors 
-are hardcoded to work with simple IdPs only (i.e. the SP metadata generation is 
-severely lacking). Keycloak is slowly improving on this aspect, so over time this plugin 
-will become simpler and targeted on implementing only the specific changes required by CIE ID.
+Besides the CIE ID-SAML2 protocol differences, some of the SP behaviors
+are hardcoded to work with simple IdPs only (i.e. there is no support for generating SP metadata
+that joins multiple SPs) . Keycloak is slowly improving on this aspect, so over time this plugin
+will become simpler and targeted on implementing only the specific changes required by SPID.
 
 I have documented a reference configuration for CIE ID and the workarounds required 
 in the project wiki (https://github.com/lscorcia/keycloak-cieid-provider/wiki). Please make 
@@ -32,11 +31,14 @@ As far as I know it has not been used in Production in any environment yet.
 
 Until the project gets to a stable release, it will be targeting the most recent release 
 of Keycloak as published on the website (see property `version.keycloak` in file `pom.xml`).
-Currently the main branch is targeting Keycloak 14.0.0. **Do not use this provider with previous 
+Currently the main branch is targeting Keycloak 15.0.0. **Do not use this provider with previous
 versions of Keycloak, it won't work!**  
 
-If you are evaluating this solution, my suggestion is to test the provider by compiling Keycloak
-yourself using the latest available sources. Detailed instructions are
+Since this plugin uses some Keycloak internal modules, versions of this plugin
+are coupled to Keycloak versions. After (major) Keycloak upgrades, you will almost
+certainly have also to update this provider.  
+
+Detailed instructions on how to install and configure this component are
 available in the project wiki (https://github.com/lscorcia/keycloak-cieid-provider/wiki/Installing-the-CIE-ID-provider).
 
 ## Build requirements

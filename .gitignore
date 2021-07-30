@@ -18,6 +18,7 @@ target
 .settings
 .project
 .classpath
+.vscode
 
 # OS generated files #
 ######################
