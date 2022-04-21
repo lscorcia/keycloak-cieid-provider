@@ -306,6 +306,7 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
                 SAML2Signature signatureHelper = new SAML2Signature();
                 signatureHelper.setSignatureMethod(firstCieIdProvider.getSignatureAlgorithm().getXmlSignatureMethod());
                 signatureHelper.setDigestMethod(firstCieIdProvider.getSignatureAlgorithm().getXmlSignatureDigestMethod());
+                signatureHelper.setX509Certificate(activeKey.getCertificate());
 
                 Node nextSibling = metadataDocument.getDocumentElement().getFirstChild();
                 signatureHelper.setNextSibling(nextSibling);
