@@ -139,7 +139,6 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
             String nameIDPolicyFormat = firstCieIdProvider.getConfig().getNameIDPolicyFormat();
             int attributeConsumingServiceIndex = firstCieIdProvider.getConfig().getAttributeConsumingServiceIndex() != null ? firstCieIdProvider.getConfig().getAttributeConsumingServiceIndex(): 1;
             String attributeConsumingServiceName = firstCieIdProvider.getConfig().getAttributeConsumingServiceName();
-            String[] attributeConsumingServiceNames = attributeConsumingServiceName != null ? attributeConsumingServiceName.split(","): null;
 
             List<Element> signingKeys = new LinkedList<>();
             List<Element> encryptionKeys = new LinkedList<>();
@@ -177,19 +176,11 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
             AttributeConsumingServiceType attributeConsumingService = new AttributeConsumingServiceType(attributeConsumingServiceIndex);
             attributeConsumingService.setIsDefault(true);
 
-            if (attributeConsumingServiceNames != null && attributeConsumingServiceNames.length > 0)
+            if (attributeConsumingServiceName != null)
             {
-                for (String attributeConsumingServiceNameStr: attributeConsumingServiceNames)
-                {
-                    String currentLocale = realm.getDefaultLocale() == null ? "en": realm.getDefaultLocale();
-
-                    String[] parsedName = attributeConsumingServiceNameStr.split("\\|", 2);
-                    String serviceNameLocale = parsedName.length >= 2 ? parsedName[0]: currentLocale;
-
-                    LocalizedNameType attributeConsumingServiceNameElement = new LocalizedNameType(serviceNameLocale);
-                    attributeConsumingServiceNameElement.setValue(parsedName.length >= 2 ? parsedName[1]: attributeConsumingServiceNameStr);
-                    attributeConsumingService.addServiceName(attributeConsumingServiceNameElement);
-                }
+                LocalizedNameType attributeConsumingServiceNameElement = new LocalizedNameType("");
+                attributeConsumingServiceNameElement.setValue(attributeConsumingServiceName);
+                attributeConsumingService.addServiceName(attributeConsumingServiceNameElement);
             }
     
             // Look for the SP descriptor and add the attribute consuming service
