@@ -113,7 +113,7 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
 
     @Override
     public Object callback(RealmModel realm, AuthenticationCallback callback, EventBuilder event) {
-        return new CieIdSAMLEndpoint(realm, this, getConfig(), callback, destinationValidator);
+        return new CieIdSAMLEndpoint(session, this, getConfig(), callback, destinationValidator);
     }
 
     @Override
