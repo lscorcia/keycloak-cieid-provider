@@ -43,12 +43,23 @@ available in the project wiki (https://github.com/lscorcia/keycloak-cieid-provid
 
 ## Build requirements
 * git
-* JDK8+
+* JDK17+
 * Maven
 
-## Build
+## Build (without docker)
 Just run `mvn clean package` for a full rebuild. The output package will
 be generated under `target/cieid-provider.jar`.
+
+## Build (with docker)
+Requirements:
+* Docker
+
+Just run:
+```
+git clone https://github.com/italia/keycloak-cieid-provider.git
+docker run --rm -v $(pwd)/keycloak-cieid-provider:/opt/keycloak-cieid-provider -w /opt/keycloak-cieid-provider maven:3.8.6-openjdk-18-slim bash -c "mvn clean package"
+```
+The output package will be generated under `cieid-provider/target/cieid-provider.jar`.
 
 ## Deployment
 This provider should be deployed as a module, i.e. copied under
