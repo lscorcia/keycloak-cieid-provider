@@ -83,6 +83,7 @@ public class CieIdIdentityProviderConfig extends IdentityProviderModel {
     public static final String TECHNICAL_CONTACT_COUNTRY = "technicalContactCountry";
     public static final String TECHNICAL_CONTACT_PHONE = "technicalContactPhone";
     public static final String TECHNICAL_CONTACT_EMAIL = "technicalContactEmail";
+    public static final String REALM_KEYS_PROVIDER_ID = "realmKeysProviderId";
 
     public CieIdIdentityProviderConfig(){
     }
@@ -603,4 +604,13 @@ public class CieIdIdentityProviderConfig extends IdentityProviderModel {
     public void setTechnicalContactPhone(String contactPhone) {
         getConfig().put(TECHNICAL_CONTACT_PHONE, contactPhone);
     }
+
+    public void setRealmKeysProviderId(String realmKeysProviderId) {
+        getConfig().put(REALM_KEYS_PROVIDER_ID, realmKeysProviderId);
+    }
+
+    public String getRealmKeysProviderId() {
+        return getConfig().get(REALM_KEYS_PROVIDER_ID);
+    }
+
 }

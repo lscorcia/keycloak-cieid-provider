@@ -27,6 +27,8 @@ import org.keycloak.dom.saml.v2.metadata.EndpointType;
 import org.keycloak.dom.saml.v2.metadata.EntityDescriptorType;
 import org.keycloak.dom.saml.v2.metadata.ExtensionsType;
 import org.keycloak.dom.saml.v2.metadata.IndexedEndpointType;
+import org.keycloak.dom.saml.v2.metadata.KeyDescriptorType;
+import org.keycloak.dom.saml.v2.metadata.KeyTypes;
 import org.keycloak.dom.saml.v2.metadata.LocalizedNameType;
 import org.keycloak.dom.saml.v2.metadata.LocalizedURIType;
 import org.keycloak.dom.saml.v2.metadata.OrganizationType;
@@ -51,17 +53,20 @@ import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.KeyPair;
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriBuilder;
-import javax.ws.rs.core.UriInfo;
+import jakarta.ws.rs.GET;
+import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriBuilder;
+import jakarta.ws.rs.core.UriInfo;
 
 import javax.xml.crypto.dsig.CanonicalizationMethod;
 import javax.xml.parsers.ParserConfigurationException;
@@ -136,10 +141,9 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
             String nameIDPolicyFormat = firstCieIdProvider.getConfig().getNameIDPolicyFormat();
             int attributeConsumingServiceIndex = firstCieIdProvider.getConfig().getAttributeConsumingServiceIndex() != null ? firstCieIdProvider.getConfig().getAttributeConsumingServiceIndex(): 1;
             String attributeConsumingServiceName = firstCieIdProvider.getConfig().getAttributeConsumingServiceName();
-            String[] attributeConsumingServiceNames = attributeConsumingServiceName != null ? attributeConsumingServiceName.split(","): null;
 
-            List<Element> signingKeys = new LinkedList<>();
-            List<Element> encryptionKeys = new LinkedList<>();
+            List<KeyDescriptorType> signingKeys = new LinkedList<>();
+            List<KeyDescriptorType> encryptionKeys = new LinkedList<>();
 
             session.keys().getKeysStream(realm, KeyUse.SIG, Algorithm.RS256)
                     .filter(Objects::nonNull)
@@ -149,10 +153,10 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
                         try {
                             Element element = SPMetadataDescriptor
                                     .buildKeyInfoElement(key.getKid(), PemUtils.encodeCertificate(key.getCertificate()));
-                            signingKeys.add(element);
+                            signingKeys.add(SPMetadataDescriptor.buildKeyDescriptorType(element, KeyTypes.SIGNING, null));
 
                             if (key.getStatus() == KeyStatus.ACTIVE) {
-                                encryptionKeys.add(element);
+                                encryptionKeys.add(SPMetadataDescriptor.buildKeyDescriptorType(element, KeyTypes.ENCRYPTION, null));
                             }
                         } catch (ParserConfigurationException e) {
                             logger.warn("Failed to export SAML SP Metadata!", e);
@@ -165,7 +169,7 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
             XMLStreamWriter writer = StaxUtil.getXMLStreamWriter(sw);
             SAMLMetadataWriter metadataWriter = new SAMLMetadataWriter(writer);
 
-            EntityDescriptorType entityDescriptor = SPMetadataDescriptor.buildSPdescriptor(
+            EntityDescriptorType entityDescriptor = SPMetadataDescriptor.buildSPDescriptor(
                 authnBinding, authnBinding, endpoint, endpoint,
                 wantAuthnRequestsSigned, wantAssertionsSigned, wantAssertionsEncrypted,
                 entityId, nameIDPolicyFormat, signingKeys, encryptionKeys);
@@ -174,19 +178,11 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
             AttributeConsumingServiceType attributeConsumingService = new AttributeConsumingServiceType(attributeConsumingServiceIndex);
             attributeConsumingService.setIsDefault(true);
 
-            if (attributeConsumingServiceNames != null && attributeConsumingServiceNames.length > 0)
+            if (attributeConsumingServiceName != null)
             {
-                for (String attributeConsumingServiceNameStr: attributeConsumingServiceNames)
-                {
-                    String currentLocale = realm.getDefaultLocale() == null ? "en": realm.getDefaultLocale();
-
-                    String[] parsedName = attributeConsumingServiceNameStr.split("\\|", 2);
-                    String serviceNameLocale = parsedName.length >= 2 ? parsedName[0]: currentLocale;
-
-                    LocalizedNameType attributeConsumingServiceNameElement = new LocalizedNameType(serviceNameLocale);
-                    attributeConsumingServiceNameElement.setValue(parsedName.length >= 2 ? parsedName[1]: attributeConsumingServiceNameStr);
-                    attributeConsumingService.addServiceName(attributeConsumingServiceNameElement);
-                }
+                LocalizedNameType attributeConsumingServiceNameElement = new LocalizedNameType("");
+                attributeConsumingServiceNameElement.setValue(attributeConsumingServiceName);
+                attributeConsumingService.addServiceName(attributeConsumingServiceNameElement);
             }
     
             // Look for the SP descriptor and add the attribute consuming service
@@ -298,7 +294,28 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
 
             // Metadata signing
             if (firstCieIdProvider.getConfig().isSignSpMetadata()) {
-                KeyManager.ActiveRsaKey activeKey = session.keys().getActiveRsaKey(realm);
+                KeyManager.ActiveRsaKey activeKey = session.keys().getKeysStream(realm, KeyUse.SIG, Algorithm.RS256)
+                        .filter(Objects::nonNull)
+                        .filter(key -> key.getCertificate() != null)
+                        .sorted(SamlService::compareKeys)
+                        .filter(keyWrapper -> keyWrapper.getStatus().isEnabled())
+                        .filter(keyWrapper -> keyWrapper.getStatus().isActive())
+                        .filter(keyWrapper -> {
+                            final Optional<String> realmKeysProviderId = Optional.ofNullable(firstCieIdProvider.getConfig().getRealmKeysProviderId());
+                            if (realmKeysProviderId.isPresent()) {
+                                return keyWrapper.getProviderId().equalsIgnoreCase(realmKeysProviderId.get());
+                            }
+                            return true;
+                        })
+                        .map(keyWrapper -> {
+                            return new KeyManager.ActiveRsaKey(
+                                    keyWrapper.getKid(),
+                                    (PrivateKey) keyWrapper.getPrivateKey(),
+                                    (PublicKey) keyWrapper.getPublicKey(),
+                                    keyWrapper.getCertificate()
+                            );
+                        }).findFirst().orElseThrow(() -> new RuntimeException("Cannot find valid certificate for signin."));
+
                 String keyName = firstCieIdProvider.getConfig().getXmlSigKeyInfoKeyNameTransformer().getKeyName(activeKey.getKid(), activeKey.getCertificate());
                 KeyPair keyPair = new KeyPair(activeKey.getPublicKey(), activeKey.getPrivateKey());
 
@@ -306,6 +323,7 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
                 SAML2Signature signatureHelper = new SAML2Signature();
                 signatureHelper.setSignatureMethod(firstCieIdProvider.getSignatureAlgorithm().getXmlSignatureMethod());
                 signatureHelper.setDigestMethod(firstCieIdProvider.getSignatureAlgorithm().getXmlSignatureDigestMethod());
+                signatureHelper.setX509Certificate(activeKey.getCertificate());
 
                 Node nextSibling = metadataDocument.getDocumentElement().getFirstChild();
                 signatureHelper.setNextSibling(nextSibling);

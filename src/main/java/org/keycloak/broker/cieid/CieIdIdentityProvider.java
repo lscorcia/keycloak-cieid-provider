@@ -35,6 +35,8 @@ import org.keycloak.dom.saml.v2.assertion.NameIDType;
 import org.keycloak.dom.saml.v2.assertion.SubjectType;
 import org.keycloak.dom.saml.v2.metadata.AttributeConsumingServiceType;
 import org.keycloak.dom.saml.v2.metadata.EntityDescriptorType;
+import org.keycloak.dom.saml.v2.metadata.KeyDescriptorType;
+import org.keycloak.dom.saml.v2.metadata.KeyTypes;
 import org.keycloak.dom.saml.v2.metadata.LocalizedNameType;
 import org.keycloak.dom.saml.v2.metadata.RequestedAttributeType;
 import org.keycloak.dom.saml.v2.protocol.AuthnRequestType;
@@ -79,26 +81,22 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriBuilder;
-import javax.ws.rs.core.UriInfo;
+import jakarta.ws.rs.core.MediaType;
+import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.UriBuilder;
+import jakarta.ws.rs.core.UriInfo;
 import javax.xml.crypto.dsig.CanonicalizationMethod;
 import javax.xml.parsers.ParserConfigurationException;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.util.*;
 import java.util.stream.Collectors;
 import javax.xml.stream.XMLStreamWriter;
 
 import java.io.StringWriter;
 import java.net.URI;
 import java.security.KeyPair;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 
 /**
  * @author Pedro Igor
@@ -115,7 +113,7 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
 
     @Override
     public Object callback(RealmModel realm, AuthenticationCallback callback, EventBuilder event) {
-        return new CieIdSAMLEndpoint(realm, this, getConfig(), callback, destinationValidator);
+        return new CieIdSAMLEndpoint(session, this, getConfig(), callback, destinationValidator);
     }
 
     @Override
@@ -178,7 +176,27 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
             boolean postBinding = getConfig().isPostBindingAuthnRequest();
 
             if (getConfig().isWantAuthnRequestsSigned()) {
-                KeyManager.ActiveRsaKey keys = session.keys().getActiveRsaKey(realm);
+                KeyManager.ActiveRsaKey keys = session.keys().getKeysStream(realm, KeyUse.SIG, Algorithm.RS256)
+                        .filter(Objects::nonNull)
+                        .filter(key -> key.getCertificate() != null)
+                        .sorted(SamlService::compareKeys)
+                        .filter(keyWrapper -> keyWrapper.getStatus().isEnabled())
+                        .filter(keyWrapper -> keyWrapper.getStatus().isActive())
+                        .filter(keyWrapper -> {
+                            final Optional<String> realmKeysProviderId = Optional.ofNullable(getConfig().getRealmKeysProviderId());
+                            if (realmKeysProviderId.isPresent()) {
+                                return keyWrapper.getProviderId().equalsIgnoreCase(realmKeysProviderId.get());
+                            }
+                            return true;
+                        })
+                        .map(keyWrapper -> {
+                            return new KeyManager.ActiveRsaKey(
+                                    keyWrapper.getKid(),
+                                    (PrivateKey) keyWrapper.getPrivateKey(),
+                                    (PublicKey) keyWrapper.getPublicKey(),
+                                    keyWrapper.getCertificate()
+                            );
+                        }).findFirst().orElseThrow(() -> new RuntimeException("Cannot find valid certificate for signin."));
 
                 String keyName = getConfig().getXmlSigKeyInfoKeyNameTransformer().getKeyName(keys.getKid(), keys.getCertificate());
                 binding.signWith(keyName, keys.getPrivateKey(), keys.getPublicKey(), keys.getCertificate())
@@ -379,8 +397,8 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
             String nameIDPolicyFormat = getConfig().getNameIDPolicyFormat();
 
 
-            List<Element> signingKeys = new LinkedList<>();
-            List<Element> encryptionKeys = new LinkedList<>();
+            List<KeyDescriptorType> signingKeys = new LinkedList<>();
+            List<KeyDescriptorType> encryptionKeys = new LinkedList<>();
 
             session.keys().getKeysStream(realm, KeyUse.SIG, Algorithm.RS256)
                     .filter(Objects::nonNull)
@@ -390,10 +408,10 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
                         try {
                             Element element = SPMetadataDescriptor
                                     .buildKeyInfoElement(key.getKid(), PemUtils.encodeCertificate(key.getCertificate()));
-                            signingKeys.add(element);
+                            signingKeys.add(SPMetadataDescriptor.buildKeyDescriptorType(element, KeyTypes.SIGNING, null));
 
                             if (key.getStatus() == KeyStatus.ACTIVE) {
-                                encryptionKeys.add(element);
+                                encryptionKeys.add(SPMetadataDescriptor.buildKeyDescriptorType(element, KeyTypes.ENCRYPTION, null));
                             }
                         } catch (ParserConfigurationException e) {
                             logger.warn("Failed to export SAML SP Metadata!", e);
@@ -406,7 +424,7 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
             XMLStreamWriter writer = StaxUtil.getXMLStreamWriter(sw);
             SAMLMetadataWriter metadataWriter = new SAMLMetadataWriter(writer);
 
-            EntityDescriptorType entityDescriptor = SPMetadataDescriptor.buildSPdescriptor(
+            EntityDescriptorType entityDescriptor = SPMetadataDescriptor.buildSPDescriptor(
                 authnBinding, authnBinding, endpoint, endpoint,
                 wantAuthnRequestsSigned, wantAssertionsSigned, wantAssertionsEncrypted,
                 entityId, nameIDPolicyFormat, signingKeys, encryptionKeys);
@@ -457,7 +475,28 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
             // Metadata signing
             if (getConfig().isSignSpMetadata())
             {
-                KeyManager.ActiveRsaKey activeKey = session.keys().getActiveRsaKey(realm);
+                KeyManager.ActiveRsaKey activeKey = session.keys().getKeysStream(realm, KeyUse.SIG, Algorithm.RS256)
+                        .filter(Objects::nonNull)
+                        .filter(key -> key.getCertificate() != null)
+                        .sorted(SamlService::compareKeys)
+                        .filter(keyWrapper -> keyWrapper.getStatus().isEnabled())
+                        .filter(keyWrapper -> keyWrapper.getStatus().isActive())
+                        .filter(keyWrapper -> {
+                            final Optional<String> realmKeysProviderId = Optional.ofNullable(getConfig().getRealmKeysProviderId());
+                            if (realmKeysProviderId.isPresent()) {
+                                return keyWrapper.getProviderId().equalsIgnoreCase(realmKeysProviderId.get());
+                            }
+                            return true;
+                        })
+                        .map(keyWrapper -> {
+                            return new KeyManager.ActiveRsaKey(
+                                    keyWrapper.getKid(),
+                                    (PrivateKey) keyWrapper.getPrivateKey(),
+                                    (PublicKey) keyWrapper.getPublicKey(),
+                                    keyWrapper.getCertificate()
+                            );
+                        }).findFirst().orElseThrow(() -> new RuntimeException("Cannot find valid certificate for signin."));
+
                 String keyName = getConfig().getXmlSigKeyInfoKeyNameTransformer().getKeyName(activeKey.getKid(), activeKey.getCertificate());
                 KeyPair keyPair = new KeyPair(activeKey.getPublicKey(), activeKey.getPrivateKey());
 
