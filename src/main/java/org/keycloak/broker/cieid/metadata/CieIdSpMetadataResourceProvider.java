@@ -53,12 +53,9 @@ import java.io.StringWriter;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.KeyPair;
-import java.security.PrivateKey;
-import java.security.PublicKey;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 import jakarta.ws.rs.GET;
@@ -294,28 +291,7 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
 
             // Metadata signing
             if (firstCieIdProvider.getConfig().isSignSpMetadata()) {
-                KeyManager.ActiveRsaKey activeKey = session.keys().getKeysStream(realm, KeyUse.SIG, Algorithm.RS256)
-                        .filter(Objects::nonNull)
-                        .filter(key -> key.getCertificate() != null)
-                        .sorted(SamlService::compareKeys)
-                        .filter(keyWrapper -> keyWrapper.getStatus().isEnabled())
-                        .filter(keyWrapper -> keyWrapper.getStatus().isActive())
-                        .filter(keyWrapper -> {
-                            final Optional<String> realmKeysProviderId = Optional.ofNullable(firstCieIdProvider.getConfig().getRealmKeysProviderId());
-                            if (realmKeysProviderId.isPresent()) {
-                                return keyWrapper.getProviderId().equalsIgnoreCase(realmKeysProviderId.get());
-                            }
-                            return true;
-                        })
-                        .map(keyWrapper -> {
-                            return new KeyManager.ActiveRsaKey(
-                                    keyWrapper.getKid(),
-                                    (PrivateKey) keyWrapper.getPrivateKey(),
-                                    (PublicKey) keyWrapper.getPublicKey(),
-                                    keyWrapper.getCertificate()
-                            );
-                        }).findFirst().orElseThrow(() -> new RuntimeException("Cannot find valid certificate for signin."));
-
+                KeyManager.ActiveRsaKey activeKey = session.keys().getActiveRsaKey(realm);
                 String keyName = firstCieIdProvider.getConfig().getXmlSigKeyInfoKeyNameTransformer().getKeyName(activeKey.getKid(), activeKey.getCertificate());
                 KeyPair keyPair = new KeyPair(activeKey.getPublicKey(), activeKey.getPrivateKey());
 
