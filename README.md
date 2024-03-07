@@ -28,12 +28,23 @@ are coupled to Keycloak versions. After (major) Keycloak upgrades, you will almo
 certainly have also to update this provider.  
 
 ## Compatibility
-* Keycloak 23.x.x: Release 1.0.7
-* Keycloak 19.x.x: Release 1.0.6
+* Keycloak 24.x.x: Release `24.0.1`
+* Keycloak 23.x.x: Release `1.0.7`
+* Keycloak 19.x.x: Release `1.0.6`
 
 ## Configuration
-### Release 1.0.7 (latest, Keycloak 23.x.x compatibility)
-With the latest release targeting latest Keycloak 23.x.x it's not possible to configure the plugin through the Keycloak web UI, 
+### Release 24.0.1 (latest, Keycloak 24.0.1 compatibility)
+With this release targeting latest Keycloak 24.0.1 it was restored the possibility of configuring the plugin through 
+the Keycloak web UI, detailed instructions on how to install and configure this component are 
+available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
+To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-spid-provider-configuration-client
+#### IMPORTANT if upgrading from release 1.0.17
+Provider ID was changed from `cieid` to `cieid-saml` in order to account for [hardcoded Keycloak 24.x behavior](https://github.com/keycloak/keycloak/blob/a228b6c7c9ec7a54ee91bb547b42cc4097ae38e2/js/apps/admin-ui/src/identity-providers/add/DetailSettings.tsx#L396). Before upgrading the plugin make sure to run this SQL query against Keycloak database:
+
+    UPDATE IDENTITY_PROVIDER SET PROVIDER_ID="cieid-saml" WHERE PROVIDER_ID="cieid"
+
+### Release 1.0.7 (Keycloak 23.x.x compatibility)
+With the release targeting Keycloak 23.x.x it's not possible to configure the plugin through the Keycloak web UI, 
 but only through REST services. Suggested to use https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
 
 ### Release 1.0.6
@@ -47,8 +58,18 @@ To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/ke
 * Maven
 
 ## Build (without docker)
-Just run `mvn clean package` for a full rebuild. The output package will
-be generated under `target/cieid-provider.jar`.
+Requirements:
+* git
+* JDK17+
+* Maven
+
+Just run:
+```
+git clone https://github.com/lscorcia/keycloak-cieid-provider.git
+cd keycloak-cieid-provider
+mvn clean package
+```
+The output package will be generated under `target/cieid-provider.jar`.
 
 ## Build (with docker)
 Requirements:
@@ -56,10 +77,11 @@ Requirements:
 
 Just run:
 ```
-git clone https://github.com/italia/keycloak-cieid-provider.git
-docker run --rm -v $(pwd)/keycloak-cieid-provider:/opt/keycloak-cieid-provider -w /opt/keycloak-cieid-provider maven:3.8.6-openjdk-18-slim bash -c "mvn clean package"
+git clone https://github.com/lscorcia/keycloak-cieid-provider.git
+cd keycloak-cieid-provider
+docker run --rm -v $(pwd):/opt/keycloak-cieid-provider -w /opt/keycloak-cieid-provider maven:3.8.6-openjdk-18-slim bash -c "mvn clean package"
 ```
-The output package will be generated under `cieid-provider/target/cieid-provider.jar`.
+The output package will be generated under `target/cieid-provider.jar`.
 
 ## Deployment
 This provider should be deployed as a module, i.e. copied under
@@ -71,26 +93,6 @@ If successful you will find a new provider type called `CIE ID` in the
 
 ## Upgrading from previous versions
 Upgrades are usually seamless, just repeat the deployment command.  
-Sometimes Keycloak caches don't get flushed when a new deployment occurs; in that case you will need
-to edit the file `{$KEYCLOAK_PATH}/standalone/configuration/standalone.xml`, find the following section
-```
-<theme>
-  <staticMaxAge>2592000</staticMaxAge>
-  <cacheThemes>true</cacheThemes>
-  <cacheTemplates>true</cacheTemplates>
-  <dir>${jboss.home.dir}/themes</dir>
-</theme>
-```
-and change it to:
-```
-<theme>
-  <staticMaxAge>-1</staticMaxAge>
-  <cacheThemes>false</cacheThemes>
-  <cacheTemplates>false</cacheTemplates>
-  <dir>${jboss.home.dir}/themes</dir>
-</theme>
-```
-
 Then restart Keycloak and it will reload the resources from the packages. Make sure you also clear 
 your browser caches or use incognito mode when verifying the correct deployment.
 After the first reload you can turn back on the caches and restart Keycloak again.

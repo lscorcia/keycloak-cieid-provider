@@ -38,10 +38,8 @@ import org.keycloak.dom.saml.v2.metadata.EntityDescriptorType;
 import org.keycloak.dom.saml.v2.metadata.KeyDescriptorType;
 import org.keycloak.dom.saml.v2.metadata.KeyTypes;
 import org.keycloak.dom.saml.v2.metadata.LocalizedNameType;
-import org.keycloak.dom.saml.v2.metadata.RequestedAttributeType;
 import org.keycloak.dom.saml.v2.protocol.AuthnRequestType;
 import org.keycloak.dom.saml.v2.protocol.LogoutRequestType;
-import org.keycloak.dom.saml.v2.protocol.ResponseType;
 import org.keycloak.events.EventBuilder;
 import org.keycloak.models.FederatedIdentityModel;
 import org.keycloak.models.IdentityProviderMapperModel;
@@ -90,7 +88,6 @@ import javax.xml.parsers.ParserConfigurationException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.*;
-import java.util.stream.Collectors;
 import javax.xml.stream.XMLStreamWriter;
 
 import java.io.StringWriter;
@@ -182,13 +179,6 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
                         .sorted(SamlService::compareKeys)
                         .filter(keyWrapper -> keyWrapper.getStatus().isEnabled())
                         .filter(keyWrapper -> keyWrapper.getStatus().isActive())
-                        .filter(keyWrapper -> {
-                            final Optional<String> realmKeysProviderId = Optional.ofNullable(getConfig().getRealmKeysProviderId());
-                            if (realmKeysProviderId.isPresent()) {
-                                return keyWrapper.getProviderId().equalsIgnoreCase(realmKeysProviderId.get());
-                            }
-                            return true;
-                        })
                         .map(keyWrapper -> {
                             return new KeyManager.ActiveRsaKey(
                                     keyWrapper.getKid(),
@@ -266,7 +256,6 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
 
     @Override
     public void authenticationFinished(AuthenticationSessionModel authSession, BrokeredIdentityContext context)  {
-        ResponseType responseType = (ResponseType)context.getContextData().get(CieIdSAMLEndpoint.SAML_LOGIN_RESPONSE);
         AssertionType assertion = (AssertionType)context.getContextData().get(CieIdSAMLEndpoint.SAML_ASSERTION);
         SubjectType subject = assertion.getSubject();
         SubjectType.STSubType subType = subject.getSubType();
@@ -475,28 +464,7 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
             // Metadata signing
             if (getConfig().isSignSpMetadata())
             {
-                KeyManager.ActiveRsaKey activeKey = session.keys().getKeysStream(realm, KeyUse.SIG, Algorithm.RS256)
-                        .filter(Objects::nonNull)
-                        .filter(key -> key.getCertificate() != null)
-                        .sorted(SamlService::compareKeys)
-                        .filter(keyWrapper -> keyWrapper.getStatus().isEnabled())
-                        .filter(keyWrapper -> keyWrapper.getStatus().isActive())
-                        .filter(keyWrapper -> {
-                            final Optional<String> realmKeysProviderId = Optional.ofNullable(getConfig().getRealmKeysProviderId());
-                            if (realmKeysProviderId.isPresent()) {
-                                return keyWrapper.getProviderId().equalsIgnoreCase(realmKeysProviderId.get());
-                            }
-                            return true;
-                        })
-                        .map(keyWrapper -> {
-                            return new KeyManager.ActiveRsaKey(
-                                    keyWrapper.getKid(),
-                                    (PrivateKey) keyWrapper.getPrivateKey(),
-                                    (PublicKey) keyWrapper.getPublicKey(),
-                                    keyWrapper.getCertificate()
-                            );
-                        }).findFirst().orElseThrow(() -> new RuntimeException("Cannot find valid certificate for signin."));
-
+                KeyManager.ActiveRsaKey activeKey = session.keys().getActiveRsaKey(realm);
                 String keyName = getConfig().getXmlSigKeyInfoKeyNameTransformer().getKeyName(activeKey.getKid(), activeKey.getCertificate());
                 KeyPair keyPair = new KeyPair(activeKey.getPublicKey(), activeKey.getPrivateKey());
 
