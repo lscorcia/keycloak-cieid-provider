@@ -18,6 +18,7 @@ package org.keycloak.broker.cieid;
 
 import java.util.List;
 
+import org.keycloak.broker.cieid.metadata.CieIdSpMetadataResourceProviderFactory;
 import org.keycloak.broker.saml.SAMLIdentityProviderConfig;
 import org.keycloak.models.IdentityProviderModel;
 import org.keycloak.provider.ProviderConfigProperty;
@@ -49,6 +50,7 @@ public class CieIdIdentityProviderConfig extends SAMLIdentityProviderConfig {
     public static final String TECHNICAL_CONTACT_COUNTRY = "technicalContactCountry";
     public static final String TECHNICAL_CONTACT_PHONE = "technicalContactPhone";
     public static final String TECHNICAL_CONTACT_EMAIL = "technicalContactEmail";
+    public static final String METADATA_URL = "metadataUrl";
 
     public CieIdIdentityProviderConfig(){
     }
@@ -249,9 +251,25 @@ public class CieIdIdentityProviderConfig extends SAMLIdentityProviderConfig {
         getConfig().put(TECHNICAL_CONTACT_PHONE, contactPhone);
     }
     
+    public String getMetadataUrl() {
+        return getConfig().get(METADATA_URL);
+    }
+
+    public void setMetadataUrl(String metadataUrl) {
+        getConfig().put(METADATA_URL, metadataUrl);
+    }
 
     public static List<ProviderConfigProperty> getConfigProperties() {
         return ProviderConfigurationBuilder.create()
+ 
+        .property()
+        .name(METADATA_URL)
+        .type(ProviderConfigProperty.STRING_TYPE)
+        .defaultValue("/realms/<realm>/" + CieIdSpMetadataResourceProviderFactory.ID)
+        .label("identity-provider.saml.url.metadata")
+        .helpText("identity-provider.saml.url.metadata.tooltip")
+        .add()
+
         .property()
         .name(ORGANIZATION_NAMES)
         .type(ProviderConfigProperty.STRING_TYPE)

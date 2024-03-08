@@ -25,6 +25,7 @@ import java.util.Map;
 import javax.xml.namespace.QName;
 
 import org.keycloak.Config.Scope;
+import org.keycloak.broker.cieid.metadata.CieIdSpMetadataResourceProvider;
 import org.keycloak.broker.provider.AbstractIdentityProviderFactory;
 import org.keycloak.dom.saml.v2.assertion.AttributeType;
 import org.keycloak.dom.saml.v2.metadata.EndpointType;
@@ -63,6 +64,7 @@ public class CieIdIdentityProviderFactory extends AbstractIdentityProviderFactor
 
     @Override
     public CieIdIdentityProvider create(KeycloakSession session, IdentityProviderModel model) {
+        model.getConfig().put(CieIdIdentityProviderConfig.METADATA_URL, CieIdSpMetadataResourceProvider.getMetadataURL(session).toString());
         return new CieIdIdentityProvider(session, new CieIdIdentityProviderConfig(model), destinationValidator);
     }
 
