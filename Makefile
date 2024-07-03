@@ -1,4 +1,4 @@
-SERVICE_TARGET := maven:3.8.7-amazoncorretto-11
+SERVICE_TARGET := maven:3-eclipse-temurin-21-alpine
 
 # all our targets are phony (no files to check).
 .PHONY: help package
