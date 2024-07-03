@@ -28,16 +28,22 @@ are coupled to Keycloak versions. After (major) Keycloak upgrades, you will almo
 certainly have also to update this provider.  
 
 ## Compatibility
+* Keycloak 25.x.x: Release `25.0.1`
 * Keycloak 24.x.x: Release `24.0.1`
 * Keycloak 23.x.x: Release `1.0.7`
 * Keycloak 19.x.x: Release `1.0.6`
 
 ## Configuration
+### Release 25.0.1 (latest, Keycloak 25.0.1 compatibility)
+Detailed instructions on how to install and configure this component are 
+available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
+To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
+
 ### Release 24.0.1 (latest, Keycloak 24.0.1 compatibility)
 With this release targeting latest Keycloak 24.0.1 it was restored the possibility of configuring the plugin through 
 the Keycloak web UI, detailed instructions on how to install and configure this component are 
 available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
-To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-spid-provider-configuration-client
+To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
 #### IMPORTANT if upgrading from release 1.0.17
 Provider ID was changed from `cieid` to `cieid-saml` in order to account for [hardcoded Keycloak 24.x behavior](https://github.com/keycloak/keycloak/blob/a228b6c7c9ec7a54ee91bb547b42cc4097ae38e2/js/apps/admin-ui/src/identity-providers/add/DetailSettings.tsx#L396). Before upgrading the plugin make sure to run this SQL query against Keycloak database:
 
