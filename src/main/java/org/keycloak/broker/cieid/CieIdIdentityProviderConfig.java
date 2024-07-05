@@ -264,7 +264,7 @@ public class CieIdIdentityProviderConfig extends SAMLIdentityProviderConfig {
  
         .property()
         .name(METADATA_URL)
-        .type(ProviderConfigProperty.STRING_TYPE)
+        .type(ProviderConfigProperty.URL_TYPE)
         .defaultValue("/realms/<realm>/" + CieIdSpMetadataResourceProviderFactory.ID)
         .label("identity-provider.saml.url.metadata")
         .helpText("identity-provider.saml.url.metadata.tooltip")
