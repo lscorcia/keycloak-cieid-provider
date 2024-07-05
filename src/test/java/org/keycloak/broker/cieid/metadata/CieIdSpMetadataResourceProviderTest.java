@@ -17,7 +17,6 @@
 
  package org.keycloak.broker.cieid.metadata;
 
- import org.jboss.resteasy.spi.ResteasyUriBuilder;
  import org.junit.jupiter.api.Assertions;
  import org.junit.jupiter.api.BeforeAll;
  import org.junit.jupiter.api.BeforeEach;
@@ -55,7 +54,9 @@
  import org.xmlunit.placeholder.PlaceholderDifferenceEvaluator;
  
  import jakarta.ws.rs.core.Response;
- import javax.xml.transform.Source;
+import jakarta.ws.rs.core.UriBuilder;
+
+import javax.xml.transform.Source;
  import java.net.URI;
  import java.security.InvalidKeyException;
  import java.security.KeyPair;
@@ -129,7 +130,7 @@
              when(keycloakSession.getContext()).thenReturn(keycloakContext);
              lenient().when(keycloakSession.getKeycloakSessionFactory()).thenReturn(keycloakSessionFactory);
              KeycloakUriInfo keycloakUriInfo = mock(KeycloakUriInfo.class);
-             lenient().when(keycloakUriInfo.getBaseUriBuilder()).thenAnswer(i -> ResteasyUriBuilder.fromUri(new URI(SP_KEYCLOAK_BASE_URL + "/auth")));
+             lenient().when(keycloakUriInfo.getBaseUriBuilder()).thenAnswer(i -> UriBuilder.fromUri(new URI(SP_KEYCLOAK_BASE_URL + "/auth")));
              lenient().when(keycloakContext.getUri()).thenReturn(keycloakUriInfo);
              when(keycloakContext.getRealm()).thenReturn(realm);
              lenient().when(realm.getName()).thenReturn("cieid-realm");
