@@ -28,12 +28,18 @@ are coupled to Keycloak versions. After (major) Keycloak upgrades, you will almo
 certainly have also to update this provider.  
 
 ## Compatibility
+* Keycloak 26.x.x: Release `26.0.5`
 * Keycloak 25.x.x: Release `25.0.1`
 * Keycloak 24.x.x: Release `24.0.1`
 * Keycloak 23.x.x: Release `1.0.7`
 * Keycloak 19.x.x: Release `1.0.6`
 
 ## Configuration
+### Release 26.0.5 (latest, Keycloak 26.0.5 compatibility)
+Detailed instructions on how to install and configure this component are 
+available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
+To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
+
 ### Release 25.0.1 (latest, Keycloak 25.0.1 compatibility)
 Detailed instructions on how to install and configure this component are 
 available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
