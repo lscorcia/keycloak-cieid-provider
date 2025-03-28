@@ -36,10 +36,15 @@ certainly have also to update this provider.
 * Keycloak 19.x.x: Release `1.0.6`
 
 ## Configuration
-### Release 26.1.3 (latest, Keycloak 26.1.x compatibility)
+### Release 26.1.4 (latest, Keycloak 26.1.x compatibility)
 Detailed instructions on how to install and configure this component are 
 available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
 To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
+
+**Important when upgrading to 26.1.4**: given the enhanced compatibility with [spid-sp-test](https://github.com/italia/spid-sp-test/) checks make sure your IdP configuration is maintained with "Identity Provider entity ID"
+* PROD https://idserver.servizicie.interno.gov.it/idp/profile/SAML2/POST/SSO
+* PRE-PROD https://preproduzione.idserver.servizicie.interno.gov.it/idp/profile/SAML2/POST/SSO
+* SPID-SP-TEST https://localhost:8443
 
 ### Release 26.0.5 (latest, Keycloak 26.0.5 compatibility)
 Detailed instructions on how to install and configure this component are 
