@@ -18,10 +18,9 @@ sure to read it and understand the config steps and the open issues and
 limitations before planning your Production environment.
 
 ## Status
-This project is still at a beta stage, but it has been successfully tested for [CIE ID federation](https://docs.italia.it/italia/cie/cie-manuale-operativo-docs/it/master/onboarding.html) and **it's currently used in Production**.
+This project is has been successfully tested for [CIE ID federation](https://docs.italia.it/italia/cie/cie-manuale-operativo-docs/it/master/onboarding.html) and **it's currently used in Production**.
 
-Until the project gets to a stable release, it will be targeting the most recent release 
-of Keycloak as published on the website (see property `version.keycloak` in file `pom.xml`).
+It will be targeting the most recent release of Keycloak as published on the website (see property `version.keycloak` in file `pom.xml`).
 
 Since this plugin uses some Keycloak internal modules, versions of this plugin
 are coupled to Keycloak versions. After (major) Keycloak upgrades, you will almost
@@ -45,6 +44,8 @@ To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/ke
 * PROD https://idserver.servizicie.interno.gov.it/idp/profile/SAML2/POST/SSO
 * PRE-PROD https://preproduzione.idserver.servizicie.interno.gov.it/idp/profile/SAML2/POST/SSO
 * SPID-SP-TEST https://localhost:8443
+
+![image](https://github.com/user-attachments/assets/2828c301-0977-4cc0-9472-b25f3c83d5c8)
 
 ### Release 26.0.5 (latest, Keycloak 26.0.5 compatibility)
 Detailed instructions on how to install and configure this component are 
