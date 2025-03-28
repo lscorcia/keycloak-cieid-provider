@@ -126,6 +126,7 @@ public class CieIdIdentityProviderFactory extends AbstractIdentityProviderFactor
                         }
 
                     }
+                    samlIdentityProviderConfig.setIdpEntityId(entityType.getEntityID());
                     samlIdentityProviderConfig.setSingleLogoutServiceUrl(singleLogoutServiceUrl);
                     samlIdentityProviderConfig.setSingleSignOnServiceUrl(singleSignOnServiceUrl);
                     samlIdentityProviderConfig.setWantAuthnRequestsSigned(idpDescriptor.isWantAuthnRequestsSigned());
