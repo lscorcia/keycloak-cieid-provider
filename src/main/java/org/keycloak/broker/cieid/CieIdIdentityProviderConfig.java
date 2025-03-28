@@ -27,6 +27,7 @@ import org.keycloak.provider.ProviderConfigurationBuilder;
 public class CieIdIdentityProviderConfig extends SAMLIdentityProviderConfig {
 
     public static final String ORGANIZATION_NAMES = "organizationNames";
+    public static final String IDP_ENTITY_ID = "idpEntityId";
     public static final String ORGANIZATION_DISPLAY_NAMES = "organizationDisplayNames";
     public static final String ORGANIZATION_URLS = "organizationUrls";
     public static final String ADMINISTRATIVE_CONTACT_SP_PRIVATE = "administrativeContactIsSpPrivate";
@@ -50,6 +51,7 @@ public class CieIdIdentityProviderConfig extends SAMLIdentityProviderConfig {
     public static final String TECHNICAL_CONTACT_COUNTRY = "technicalContactCountry";
     public static final String TECHNICAL_CONTACT_PHONE = "technicalContactPhone";
     public static final String TECHNICAL_CONTACT_EMAIL = "technicalContactEmail";
+    public static final String CIEID_RESPONSE_DEBUG_ENABLED = "debugEnabled";
     public static final String METADATA_URL = "metadataUrl";
 
     public CieIdIdentityProviderConfig(){
@@ -57,6 +59,14 @@ public class CieIdIdentityProviderConfig extends SAMLIdentityProviderConfig {
 
     public CieIdIdentityProviderConfig(IdentityProviderModel identityProviderModel) {
         super(identityProviderModel);
+    }
+
+    public String getIdpEntityId() {
+        return getConfig().get(IDP_ENTITY_ID);
+    }
+
+    public void setIdpEntityId(String idpEntityId) {
+        getConfig().put(IDP_ENTITY_ID, idpEntityId);
     }
 
     public String getOrganizationNames() {
@@ -259,6 +269,14 @@ public class CieIdIdentityProviderConfig extends SAMLIdentityProviderConfig {
         getConfig().put(METADATA_URL, metadataUrl);
     }
 
+    public boolean isDebugEnabled() {
+        return Boolean.valueOf(getConfig().get(CIEID_RESPONSE_DEBUG_ENABLED));
+    }
+
+    public void setDebugEnabled(boolean isDebugEnabled) {
+        getConfig().put(CIEID_RESPONSE_DEBUG_ENABLED, String.valueOf(isDebugEnabled));
+    }
+
     public static List<ProviderConfigProperty> getConfigProperties() {
         return ProviderConfigurationBuilder.create()
  
@@ -277,6 +295,13 @@ public class CieIdIdentityProviderConfig extends SAMLIdentityProviderConfig {
         .helpText("identity-provider.cieid.organization-names.tooltip")
         .add()
 
+        .property()
+        .name(IDP_ENTITY_ID)
+        .type(ProviderConfigProperty.STRING_TYPE)
+        .label("identity-provider.saml.idp-entity-id")
+        .helpText("identity-provider.saml.idp-entity-id.tooltip")
+        .add()
+        
         .property()
         .name(ORGANIZATION_DISPLAY_NAMES)
         .type(ProviderConfigProperty.STRING_TYPE)
@@ -443,6 +468,13 @@ public class CieIdIdentityProviderConfig extends SAMLIdentityProviderConfig {
         .type(ProviderConfigProperty.STRING_TYPE)
         .label("identity-provider.cieid.contactEmail.technical")
         .helpText("identity-provider.cieid.contactEmail.technical.tooltip")
+        .add()
+
+        .property()
+        .name(CIEID_RESPONSE_DEBUG_ENABLED)
+        .type(ProviderConfigProperty.BOOLEAN_TYPE)
+        .label("identity-provider.spid.debug-enabled")
+        .helpText("identity-provider.spid.debug-enabled.tooltip")
         .add()
 
         .build();

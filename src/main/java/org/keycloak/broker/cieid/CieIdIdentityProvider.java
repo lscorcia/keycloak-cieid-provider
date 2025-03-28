@@ -101,6 +101,8 @@ import java.util.Map.Entry;
 public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentityProviderConfig> {
     protected static final Logger logger = Logger.getLogger(CieIdIdentityProvider.class);
 
+    public static final String CIEID_REQUEST_ISSUE_INSTANT = "CIEID_REQUEST_ISSUE_INSTANT";
+
     private final DestinationValidator destinationValidator;
 
     public CieIdIdentityProvider(KeycloakSession session, CieIdIdentityProviderConfig config, DestinationValidator destinationValidator) {
@@ -208,6 +210,7 @@ public class CieIdIdentityProvider extends AbstractIdentityProvider<CieIdIdentit
 
             // Save the current RequestID in the Auth Session as we need to verify it against the ID returned from the IdP
             request.getAuthenticationSession().setClientNote(SamlProtocol.SAML_REQUEST_ID_BROKER, authnRequest.getID());
+            request.getAuthenticationSession().setClientNote(CIEID_REQUEST_ISSUE_INSTANT, authnRequest.getIssueInstant().toXMLFormat());
 
             if (postBinding) {
                 return binding.postBinding(authnRequestBuilder.toDocument()).request(destinationUrl);

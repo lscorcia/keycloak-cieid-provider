@@ -18,17 +18,16 @@ sure to read it and understand the config steps and the open issues and
 limitations before planning your Production environment.
 
 ## Status
-This project is still at a beta stage, but it has been successfully tested for [CIE ID federation](https://docs.italia.it/italia/cie/cie-manuale-operativo-docs/it/master/onboarding.html) and **it's currently used in Production**.
+This project is has been successfully tested for [CIE ID federation](https://docs.italia.it/italia/cie/cie-manuale-operativo-docs/it/master/onboarding.html) and **it's currently used in Production**.
 
-Until the project gets to a stable release, it will be targeting the most recent release 
-of Keycloak as published on the website (see property `version.keycloak` in file `pom.xml`).
+It will be targeting the most recent release of Keycloak as published on the website (see property `version.keycloak` in file `pom.xml`).
 
 Since this plugin uses some Keycloak internal modules, versions of this plugin
 are coupled to Keycloak versions. After (major) Keycloak upgrades, you will almost
 certainly have also to update this provider.  
 
 ## Compatibility
-* Keycloak 26.1.x: Release `26.1.3`
+* Keycloak 26.1.x: Release `26.1.4`
 * Keycloak 26.x.x: Release `26.0.5`
 * Keycloak 25.x.x: Release `25.0.1`
 * Keycloak 24.x.x: Release `24.0.1`
@@ -36,10 +35,17 @@ certainly have also to update this provider.
 * Keycloak 19.x.x: Release `1.0.6`
 
 ## Configuration
-### Release 26.1.3 (latest, Keycloak 26.1.x compatibility)
+### Release 26.1.4 (latest, Keycloak 26.1.x compatibility)
 Detailed instructions on how to install and configure this component are 
 available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
 To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
+
+**Important when upgrading to 26.1.4**: given the enhanced compatibility with [spid-sp-test](https://github.com/italia/spid-sp-test/) checks make sure your IdP configuration is maintained with "Identity Provider entity ID"
+* PROD https://idserver.servizicie.interno.gov.it/idp/profile/SAML2/POST/SSO
+* PRE-PROD https://preproduzione.idserver.servizicie.interno.gov.it/idp/profile/SAML2/POST/SSO
+* SPID-SP-TEST https://localhost:8443
+
+![image](https://github.com/user-attachments/assets/2828c301-0977-4cc0-9472-b25f3c83d5c8)
 
 ### Release 26.0.5 (latest, Keycloak 26.0.5 compatibility)
 Detailed instructions on how to install and configure this component are 
