@@ -462,13 +462,6 @@ public class CieIdIdentityProviderConfig extends SAMLIdentityProviderConfig {
         .label("identity-provider.cieid.contactEmail.technical")
         .helpText("identity-provider.cieid.contactEmail.technical.tooltip")
         .add()
-        
-        .property()
-        .name(TECHNICAL_CONTACT_EMAIL)
-        .type(ProviderConfigProperty.STRING_TYPE)
-        .label("identity-provider.cieid.contactEmail.technical")
-        .helpText("identity-provider.cieid.contactEmail.technical.tooltip")
-        .add()
 
         .property()
         .name(CIEID_RESPONSE_DEBUG_ENABLED)
