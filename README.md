@@ -27,6 +27,7 @@ are coupled to Keycloak versions. After (major) Keycloak upgrades, you will almo
 certainly have also to update this provider.  
 
 ## Compatibility
+* Keycloak 26.5.x: Release `26.5.3`
 * Keycloak 26.4.x: Release `26.4.2`
 * Keycloak 26.3.x: Release `26.3.1`
 * Keycloak 26.2.x: Release `26.2.3`
