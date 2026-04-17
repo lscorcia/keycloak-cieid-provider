@@ -8,7 +8,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.github.lscorcia</groupId>
     <artifactId>keycloak-cieid-provider</artifactId>
-    <version>26.5.3-BIS</version>
+    <version>26.5.7</version>
     <packaging>jar</packaging>
 
     <name>Keycloak CIE ID Service Provider</name>
@@ -19,7 +19,7 @@
         <failOnMissingWebXml>false</failOnMissingWebXml>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <version.keycloak>26.5.3</version.keycloak>
+        <version.keycloak>26.5.7</version.keycloak>
 
         <xmlunit.version>2.11.0</xmlunit.version>
 
