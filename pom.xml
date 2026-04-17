@@ -78,7 +78,7 @@
             <version>${version.keycloak}</version>
             <scope>provided</scope>
         </dependency>
-        
+
         <!-- test dependencies -->
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -105,12 +105,11 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-                <groupId>org.glassfish.jersey.core</groupId>
-                <artifactId>jersey-common</artifactId>
-                <version>3.1.5</version>
-                <scope>test</scope>
+            <groupId>org.glassfish.jersey.core</groupId>
+            <artifactId>jersey-common</artifactId>
+            <version>3.1.5</version>
+            <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>
