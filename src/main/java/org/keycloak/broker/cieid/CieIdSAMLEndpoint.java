@@ -21,26 +21,19 @@ import org.keycloak.broker.provider.BrokeredIdentityContext;
 import org.keycloak.broker.provider.IdentityBrokerException;
 import org.keycloak.broker.saml.SAMLEndpoint;
 import org.keycloak.broker.saml.SAMLIdentityProvider;
-import org.keycloak.common.ClientConnection;
+import org.keycloak.crypto.Algorithm;
+import org.keycloak.crypto.KeyUse;
 import org.keycloak.dom.saml.v2.assertion.AssertionType;
-import org.keycloak.dom.saml.v2.assertion.AttributeStatementType;
-import org.keycloak.dom.saml.v2.assertion.AttributeType;
 import org.keycloak.dom.saml.v2.assertion.AuthnStatementType;
 import org.keycloak.dom.saml.v2.assertion.NameIDType;
-import org.keycloak.dom.saml.v2.assertion.SubjectType;
 import org.keycloak.dom.saml.v2.protocol.ResponseType;
 import org.keycloak.events.Errors;
 import org.keycloak.events.EventBuilder;
 import org.keycloak.events.EventType;
-import org.keycloak.models.ClientModel;
 import org.keycloak.models.KeyManager;
 import org.keycloak.models.KeycloakSession;
-import org.keycloak.models.RealmModel;
-import org.keycloak.protocol.LoginProtocol;
-import org.keycloak.protocol.LoginProtocolFactory;
-import org.keycloak.protocol.saml.SamlPrincipalType;
 import org.keycloak.protocol.saml.SamlProtocol;
-import org.keycloak.protocol.saml.SamlService;
+import org.keycloak.rotation.KeyLocator;
 import org.keycloak.saml.common.constants.GeneralConstants;
 import org.keycloak.saml.common.constants.JBossSAMLConstants;
 import org.keycloak.saml.common.constants.JBossSAMLURIConstants;
@@ -52,7 +45,6 @@ import org.keycloak.saml.validators.ConditionsValidator;
 import org.keycloak.saml.validators.DestinationValidator;
 import org.keycloak.services.ErrorPage;
 import org.keycloak.services.messages.Messages;
-import org.keycloak.services.util.CacheControlUtil;
 import org.keycloak.sessions.AuthenticationSessionModel;
 import org.keycloak.utils.StringUtil;
 import org.w3c.dom.Element;
@@ -65,26 +57,15 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.QueryParam;
 import jakarta.ws.rs.WebApplicationException;
-import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.UriBuilder;
 
 import javax.xml.namespace.QName;
 import java.net.URI;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
-import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
-
-import javax.xml.datatype.DatatypeConfigurationException;
-import javax.xml.datatype.DatatypeConstants;
-import javax.xml.datatype.DatatypeFactory;
-import javax.xml.datatype.XMLGregorianCalendar;
+import java.util.function.BiFunction;
 
 /**
  * CIE ID-specific SAML endpoint that extends the standard SAMLEndpoint
@@ -93,13 +74,7 @@ import javax.xml.datatype.XMLGregorianCalendar;
 public class CieIdSAMLEndpoint extends SAMLEndpoint {
     protected static final Logger logger = Logger.getLogger(CieIdSAMLEndpoint.class);
 
-    // Store references to parent's private fields that we need to access
-    private final KeycloakSession session;
     private final CieIdIdentityProviderConfig cieIdConfig;
-    private final DestinationValidator destinationValidator;
-    private final ClientConnection clientConnection;
-
-    // CIE ID validation helper
     private final CieIdChecks cieIdChecks;
 
     public CieIdSAMLEndpoint(KeycloakSession session, CieIdIdentityProvider provider,
@@ -107,11 +82,7 @@ public class CieIdSAMLEndpoint extends SAMLEndpoint {
                            SAMLIdentityProvider.AuthenticationCallback callback,
                            DestinationValidator destinationValidator) {
         super(session, provider, config, callback, destinationValidator);
-        // Store references to parent's private fields for local access
-        this.session = session;
         this.cieIdConfig = config;
-        this.destinationValidator = destinationValidator;
-        this.clientConnection = session.getContext().getConnection();
         this.cieIdChecks = new CieIdChecks(config);
     }
 
@@ -162,7 +133,22 @@ public class CieIdSAMLEndpoint extends SAMLEndpoint {
         @Override
         protected Response handleLoginResponse(String samlResponse, SAMLDocumentHolder holder,
                                                ResponseType responseType, String relayState, String clientId) {
-            return handleCieIdLoginResponse(this::validateAssertionSignature, samlResponse, holder, responseType, relayState, clientId);
+            try {
+                AuthenticationSessionModel authSession;
+                if (StringUtil.isNotBlank(clientId)) {
+                    authSession = samlIdpInitiatedSSO(clientId);
+                } else if (StringUtil.isNotBlank(relayState)) {
+                    authSession = callback.getAndVerifyAuthenticationSession(relayState);
+                } else {
+                    logger.error("SAML RelayState parameter was null when it should be returned by the IDP");
+                    event.event(EventType.LOGIN);
+                    event.error(Errors.INVALID_SAML_RESPONSE);
+                    return ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.IDENTITY_PROVIDER_UNEXPECTED_ERROR);
+                }
+                return handleCieIdLoginResponse(this::validateAssertionSignature, samlResponse, holder, responseType, authSession);
+            } catch (WebApplicationException e) {
+                return e.getResponse();
+            }
         }
 
         private boolean validateAssertionSignature(Element assertionElement, SAMLDocumentHolder holder) {
@@ -181,7 +167,22 @@ public class CieIdSAMLEndpoint extends SAMLEndpoint {
         @Override
         protected Response handleLoginResponse(String samlResponse, SAMLDocumentHolder holder,
                                                ResponseType responseType, String relayState, String clientId) {
-            return handleCieIdLoginResponse(this::validateAssertionSignature, samlResponse, holder, responseType, relayState, clientId);
+            try {
+                AuthenticationSessionModel authSession;
+                if (StringUtil.isNotBlank(clientId)) {
+                    authSession = samlIdpInitiatedSSO(clientId);
+                } else if (StringUtil.isNotBlank(relayState)) {
+                    authSession = callback.getAndVerifyAuthenticationSession(relayState);
+                } else {
+                    logger.error("SAML RelayState parameter was null when it should be returned by the IDP");
+                    event.event(EventType.LOGIN);
+                    event.error(Errors.INVALID_SAML_RESPONSE);
+                    return ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.IDENTITY_PROVIDER_UNEXPECTED_ERROR);
+                }
+                return handleCieIdLoginResponse(this::validateAssertionSignature, samlResponse, holder, responseType, authSession);
+            } catch (WebApplicationException e) {
+                return e.getResponse();
+            }
         }
 
         private boolean validateAssertionSignature(Element assertionElement, SAMLDocumentHolder holder) {
@@ -198,28 +199,18 @@ public class CieIdSAMLEndpoint extends SAMLEndpoint {
      * This is the core CIE ID-specific logic that differs from the parent SAMLEndpoint.
      *
      * @param signatureValidator function to validate assertion signature (provided by binding subclass)
+     * @param authSession        the already-resolved authentication session
      */
     protected Response handleCieIdLoginResponse(
-            java.util.function.BiFunction<Element, SAMLDocumentHolder, Boolean> signatureValidator,
+            BiFunction<Element, SAMLDocumentHolder, Boolean> signatureValidator,
             String samlResponse, SAMLDocumentHolder holder,
-            ResponseType responseType, String relayState, String clientId) {
+            ResponseType responseType, AuthenticationSessionModel authSession) {
         EventBuilder event = new EventBuilder(realm, session, clientConnection);
 
         try {
-            AuthenticationSessionModel authSession;
-            if (StringUtil.isNotBlank(clientId)) {
-                authSession = samlIdpInitiatedSSO(clientId, event);
-            } else if (StringUtil.isNotBlank(relayState)) {
-                authSession = callback.getAndVerifyAuthenticationSession(relayState);
-            } else {
-                logger.error("SAML RelayState parameter was null when it should be returned by the IDP");
-                event.event(EventType.LOGIN);
-                event.error(Errors.INVALID_SAML_RESPONSE);
-                return ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.IDENTITY_PROVIDER_UNEXPECTED_ERROR);
-            }
             session.getContext().setAuthenticationSession(authSession);
 
-            KeyManager.ActiveRsaKey keys = session.keys().getActiveRsaKey(realm);
+            KeyManager.ActiveRsaKey keys = new KeyManager.ActiveRsaKey(session.keys().getActiveKey(realm, KeyUse.SIG, Algorithm.RS256));
 
             // CIE ID-specific: Handle error responses with CIE ID error code translation
             if (!isSuccessfulSamlResponse(responseType)) {
@@ -387,49 +378,8 @@ public class CieIdSAMLEndpoint extends SAMLEndpoint {
         }
     }
 
-    // ============== Private method copied from parent (it's private in SAMLEndpoint) ==============
-
-    /**
-     * Handles SAML IDP-initiated SSO.
-     * This method is private in the parent SAMLEndpoint, so we need our own copy.
-     */
-    private AuthenticationSessionModel samlIdpInitiatedSSO(final String clientUrlName, EventBuilder event) {
-        event.event(EventType.LOGIN);
-        CacheControlUtil.noBackButtonCacheControlHeader(session);
-        Optional<ClientModel> oClient = session.clients()
-            .searchClientsByAttributes(realm, Collections.singletonMap(SamlProtocol.SAML_IDP_INITIATED_SSO_URL_NAME, clientUrlName), 0, 1)
-            .findFirst();
-
-        if (!oClient.isPresent()) {
-            event.error(Errors.CLIENT_NOT_FOUND);
-            Response response = ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.CLIENT_NOT_FOUND);
-            throw new WebApplicationException(response);
-        }
-
-        LoginProtocolFactory factory = (LoginProtocolFactory) session.getKeycloakSessionFactory()
-            .getProviderFactory(LoginProtocol.class, SamlProtocol.LOGIN_PROTOCOL);
-        SamlService samlService = (SamlService) factory.createProtocolEndpoint(session, event);
-        AuthenticationSessionModel authSession = samlService.getOrCreateLoginSessionForIdpInitiatedSso(session, realm, oClient.get(), null);
-        if (authSession == null) {
-            event.error(Errors.INVALID_REDIRECT_URI);
-            Response response = ErrorPage.error(session, null, Response.Status.BAD_REQUEST, Messages.INVALID_REDIRECT_URI);
-            throw new WebApplicationException(response);
-        }
-
-        return authSession;
-    }
-
-    // ============== Helper methods for handleCieIdLoginResponse ==============
-
-    /**
-     * Validates assertion signatures. This is the shared implementation used by both binding types.
-     *
-     * @param assertionElement the assertion element to validate
-     * @param keyLocator key locator for signature validation (from binding's protected method)
-     * @param hasUnencryptedSignature whether holder contains unencrypted signature (from binding's protected method)
-     */
     private boolean validateAssertionSignatureImpl(Element assertionElement,
-                                                   org.keycloak.rotation.KeyLocator keyLocator,
+                                                   KeyLocator keyLocator,
                                                    boolean hasUnencryptedSignature) {
         boolean signed = AssertionUtil.isSignedElement(assertionElement);
         final boolean assertionSignatureNotExistsWhenRequired = cieIdConfig.isWantAssertionsSigned() && !signed;
@@ -439,6 +389,8 @@ public class CieIdSAMLEndpoint extends SAMLEndpoint {
         return !(assertionSignatureNotExistsWhenRequired || signatureNotValid || hasNoSignatureWhenRequired);
     }
 
+    // isSuccessfulSamlResponse is available as protected final in SAMLEndpoint.Binding (inner class only),
+    // so we keep a copy here for use in handleCieIdLoginResponse (outer class context).
     private boolean isSuccessfulSamlResponse(ResponseType responseType) {
         return responseType != null
             && responseType.getStatus() != null
@@ -458,105 +410,4 @@ public class CieIdSAMLEndpoint extends SAMLEndpoint {
         return configEntityId;
     }
 
-    private NameIDType getSubjectNameID(final AssertionType assertion) {
-        SubjectType subject = assertion.getSubject();
-        SubjectType.STSubType subType = subject.getSubType();
-        return subType != null ? (NameIDType) subType.getBaseID() : null;
-    }
-
-    private String getPrincipal(AssertionType assertion) {
-        SamlPrincipalType principalType = cieIdConfig.getPrincipalType();
-        if (principalType == null || principalType.equals(SamlPrincipalType.SUBJECT)) {
-            NameIDType subjectNameID = getSubjectNameID(assertion);
-            return subjectNameID != null ? subjectNameID.getValue() : null;
-        } else if (principalType.equals(SamlPrincipalType.ATTRIBUTE)) {
-            return getAttributeByName(assertion, cieIdConfig.getPrincipalAttribute());
-        } else {
-            return getAttributeByFriendlyName(assertion, cieIdConfig.getPrincipalAttribute());
-        }
-    }
-
-    private String expectedPrincipalType() {
-        SamlPrincipalType principalType = cieIdConfig.getPrincipalType();
-        switch (principalType) {
-            case SUBJECT:
-                return principalType.name();
-            case ATTRIBUTE:
-            case FRIENDLY_ATTRIBUTE:
-                return String.format("%s(%s)", principalType.name(), cieIdConfig.getPrincipalAttribute());
-            default:
-                return null;
-        }
-    }
-
-    private String getX500Attribute(AssertionType assertion, X500SAMLProfileConstants attribute) {
-        return getFirstMatchingAttribute(assertion, attribute::correspondsTo);
-    }
-
-    private String getAttributeByName(AssertionType assertion, String name) {
-        return getFirstMatchingAttribute(assertion, attribute -> Objects.equals(attribute.getName(), name));
-    }
-
-    private String getAttributeByFriendlyName(AssertionType assertion, String friendlyName) {
-        return getFirstMatchingAttribute(assertion, attribute -> Objects.equals(attribute.getFriendlyName(), friendlyName));
-    }
-
-    private String getFirstMatchingAttribute(AssertionType assertion, Predicate<AttributeType> predicate) {
-        return assertion.getAttributeStatements().stream()
-            .map(AttributeStatementType::getAttributes)
-            .flatMap(Collection::stream)
-            .map(AttributeStatementType.ASTChoiceType::getAttribute)
-            .filter(predicate)
-            .map(AttributeType::getAttributeValue)
-            .flatMap(Collection::stream)
-            .findFirst()
-            .map(Object::toString)
-            .orElse(null);
-    }
-
-    private boolean validateInResponseToAttribute(ResponseType responseType, String expectedRequestId) {
-        if (expectedRequestId == null || expectedRequestId.isEmpty()) {
-            return true;
-        }
-
-        if (responseType.getInResponseTo() == null) {
-            logger.error("Response Validation Error: InResponseTo attribute was expected but not present in received response");
-            return false;
-        }
-
-        String responseInResponseToValue = responseType.getInResponseTo();
-        if (responseInResponseToValue.isEmpty()) {
-            logger.error("Response Validation Error: InResponseTo attribute was expected but it is empty in received response");
-            return false;
-        }
-
-        if (!responseInResponseToValue.equals(expectedRequestId)) {
-            logger.error("Response Validation Error: received InResponseTo attribute does not match the expected request ID");
-            return false;
-        }
-
-        if (responseType.getAssertions().isEmpty()) {
-            return true;
-        }
-
-        SubjectType subjectElement = responseType.getAssertions().get(0).getAssertion().getSubject();
-        if (subjectElement != null && subjectElement.getConfirmation() != null && !subjectElement.getConfirmation().isEmpty()) {
-            var subjectConfirmationElement = subjectElement.getConfirmation().get(0);
-            if (subjectConfirmationElement != null) {
-                var subjectConfirmationDataElement = subjectConfirmationElement.getSubjectConfirmationData();
-                if (subjectConfirmationDataElement != null && subjectConfirmationDataElement.getInResponseTo() != null) {
-                    String subjectConfirmationDataInResponseToValue = subjectConfirmationDataElement.getInResponseTo();
-                    if (subjectConfirmationDataInResponseToValue.isEmpty()) {
-                        logger.error("Response Validation Error: SubjectConfirmationData InResponseTo attribute was expected but it is empty in received response");
-                        return false;
-                    }
-                    if (!subjectConfirmationDataInResponseToValue.equals(expectedRequestId)) {
-                        logger.error("Response Validation Error: received SubjectConfirmationData InResponseTo attribute does not match the expected request ID");
-                        return false;
-                    }
-                }
-            }
-        }
-        return true;
-    }
 }
