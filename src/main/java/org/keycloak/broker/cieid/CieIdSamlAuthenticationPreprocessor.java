@@ -68,6 +68,10 @@ public class CieIdSamlAuthenticationPreprocessor implements SamlAuthenticationPr
     @Override
     public AuthnRequestType beforeSendingLoginRequest(AuthnRequestType authnRequest,
                                                        AuthenticationSessionModel authSession) {
+        if (!"true".equals(authSession.getClientNote(CieIdIdentityProvider.CIEID_FLOW_MARKER))) {
+            return authnRequest;
+        }
+
         // Get the issuer URL from the authnRequest
         String issuerURL = authnRequest.getIssuer().getValue();
 
@@ -96,6 +100,10 @@ public class CieIdSamlAuthenticationPreprocessor implements SamlAuthenticationPr
     public LogoutRequestType beforeSendingLogoutRequest(LogoutRequestType logoutRequest,
                                                         UserSessionModel userSession,
                                                         AuthenticatedClientSessionModel clientSession) {
+        if (!"true".equals(userSession.getNote(CieIdIdentityProvider.CIEID_FLOW_MARKER))) {
+            return logoutRequest;
+        }
+
         // Get the entity ID from the logoutRequest issuer
         String entityId = logoutRequest.getIssuer().getValue();
 
