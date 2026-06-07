@@ -1,6 +1,6 @@
 # Environment variables
 .EXPORT_ALL_VARIABLES:
-CIE_KC_VERSION := $(shell sed -n 's:.*<keycloak.version>\(.*\)</keycloak.version>.*:\1:p' ../pom.xml)
+CIEID_KC_VERSION := $(shell sed -n 's:.*<keycloak.version>\(.*\)</keycloak.version>.*:\1:p' ../pom.xml)
 NOW := $(shell date +"%Y%m%d_%H%M%S")
 
 .ONESHELL:
@@ -34,14 +34,14 @@ create-self-signed-certificates:
 		-keyout ${PWD}/certificates/keycloak-server.key \
 		-out ${PWD}/certificates/keycloak-server.crt \
 		-subj "/C=IT/ST=MI/L=Milan/O=AgID/OU=Keycloak/CN=keycloak" \
-		-addext "subjectAltName = DNS:cie-keycloak, DNS:cie-keycloak:8443, DNS:localhost:8443"
+		-addext "subjectAltName = DNS:cieid-keycloak, DNS:cieid-keycloak:8443, DNS:localhost:8443"
 # Key and crt files generation for nginx
 	rm -rf ${PWD}/certificates/nginx.key ${PWD}/certificates/nginx.crt
 	openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
 		-keyout ${PWD}/certificates/nginx.key \
 		-out ${PWD}/certificates/nginx.crt \
-		-subj "/C=IT/ST=MI/L=Milan/O=AgID/OU=Servizio Accreditamento/CN=cie-nginx" \
-		-addext "subjectAltName = DNS:cie-nginx, DNS:cie-nginx:443, DNS:localhost:443"
+		-subj "/C=IT/ST=MI/L=Milan/O=AgID/OU=Servizio Accreditamento/CN=cieid-nginx" \
+		-addext "subjectAltName = DNS:cieid-nginx, DNS:cieid-nginx:443, DNS:localhost:443"
 
 create-spid-sp-test-docker-image:
 # Cancellazione directory temporanea
@@ -69,8 +69,8 @@ create-spid-sp-test-metadata-certificates:
 	mkdir -p ${PWD}/certificates/spid-sp-test-idp
 
 	docker run --net=host --rm \
-		-v ${PWD}/certificates/spid-sp-test-idp:/cie \
-		--entrypoint "cie-compliant-certificates" -t italia/spid-sp-test:0.9.0-KC generator \
+		-v ${PWD}/certificates/spid-sp-test-idp:/cieid \
+		--entrypoint "spid-compliant-certificates" -t italia/spid-sp-test:0.9.0-KC generator \
 		--key-size 3072 --common-name "agid.gov.it" --days 7650 --entity-id https://localhost:8443 \
 		--locality-name Roma --org-id "PA:IT-c_h501" --org-name "AgID TEST" --sector public	
 
@@ -99,9 +99,9 @@ run-configuration-client:
 		--rm \
 		--entrypoint cp cieidclient:latest-KC /usr/src/app/.env-example /opt/mount/.env-example
 	cat ${PWD}/configuration-client/.env-example \
-		| sed 's,realm = cied,realm = cie,g' \
+		| sed 's,realm = cied,realm = cieid,g' \
 		| sed 's,createSpidSpTestIdP = false,createSpidSpTestIdP = true,g' \
-		| sed 's,https://yourdomain.com/spid-sp-test.xml,https://cie-nginx:443/spid-sp-test.xml,g' \
+		| sed 's,https://yourdomain.com/spid-sp-test.xml,https://cieid-nginx:443/spid-sp-test.xml,g' \
 		> ${PWD}/configuration-client/.env
 	docker run \
 		--net=host \
@@ -121,7 +121,7 @@ test-metadata:
 		-v "${PWD}/certificates/spid-sp-test-idp:/spid/ipd-certs" \
 		-v "${PWD}/tests/report/$(NOW)_metadata:/spid/html_report:rw" \
 		italia/spid-sp-test:0.9.0-KC \
-		--metadata-url "https://localhost:8443/auth/realms/cie/cieid-sp-metadata" \
+		--metadata-url "https://localhost:8443/auth/realms/cieid/cieid-sp-metadata" \
 		--extra --report_format html --report-output-file html_report/
 
 test-authn:
@@ -131,8 +131,8 @@ test-authn:
 		-v "${PWD}/certificates/spid-sp-test-idp:/spid/ipd-certs" \
 		-v "${PWD}/tests/report/$(NOW)_authn:/spid/html_report:rw" \
 		italia/spid-sp-test:0.9.0-KC \
-		--metadata-url "https://localhost:8443/auth/realms/cie/cieid-sp-metadata" \
-		--authn-url "https://localhost:8443/auth/realms/cie/protocol/openid-connect/auth?client_id=account&scope=openid&response_type=code&redirect_uri=https://localhost:8443/auth/realms/cie/account&state=12345&kc_idp_hint=cie-spid-sp-test" \
+		--metadata-url "https://localhost:8443/auth/realms/cieid/cieid-sp-metadata" \
+		--authn-url "https://localhost:8443/auth/realms/cieid/protocol/openid-connect/auth?client_id=account&scope=openid&response_type=code&redirect_uri=https://localhost:8443/auth/realms/cieid/account&state=12345&kc_idp_hint=cieid-spid-sp-test" \
 		--extra --report_format html --report-output-file html_report/
 
 test-responses:
@@ -144,8 +144,8 @@ test-responses:
 		-v "${PWD}/tests/report/$(NOW)_responses:/spid/html_report:rw" \
 		-v "${PWD}/tests/dumps/$(NOW)_responses:/spid/dumps:rw" \
 		italia/spid-sp-test:0.9.0-KC \
-		--metadata-url "https://localhost:8443/auth/realms/cie/cieid-sp-metadata" \
-		--authn-url "https://localhost:8443/auth/realms/cie/protocol/openid-connect/auth?client_id=account&scope=openid&response_type=code&redirect_uri=https://localhost:8443/auth/realms/cie/account&state=12345&kc_idp_hint=cie-spid-sp-test" \
+		--metadata-url "https://localhost:8443/auth/realms/cieid/cieid-sp-metadata" \
+		--authn-url "https://localhost:8443/auth/realms/cieid/protocol/openid-connect/auth?client_id=account&scope=openid&response_type=code&redirect_uri=https://localhost:8443/auth/realms/cieid/account&state=12345&kc_idp_hint=cieid-spid-sp-test" \
 		--extra --report_format html --report-output-file html_report/ \
 		--test-response --response-html-dumps dumps/
 
@@ -168,7 +168,7 @@ init: create-configuration-client-docker-image create-self-signed-certificates c
 # Mariadb commands
 
 compose-mariadb:
-	CIE_KC_DB_TYPE=mariadb docker compose \
+	CIEID_KC_DB_TYPE=mariadb docker compose \
 		-f docker-compose-networks.yaml \
 		-f docker-compose-mariadb.yaml \
 		-f docker-compose-keycloak.yaml \
@@ -176,7 +176,7 @@ compose-mariadb:
 		up -d --wait
 
 reset-mariadb:
-	CIE_KC_DB_TYPE=mariadb docker compose \
+	CIEID_KC_DB_TYPE=mariadb docker compose \
 		-f docker-compose-networks.yaml \
 		-f docker-compose-mariadb.yaml \
 		-f docker-compose-keycloak.yaml \
@@ -196,7 +196,7 @@ full-mariadb: setup-mariadb test-responses
 # Mysql commands
 
 compose-mysql:
-	CIE_KC_DB_TYPE=mysql docker compose \
+	CIEID_KC_DB_TYPE=mysql docker compose \
 		-f docker-compose-networks.yaml \
 		-f docker-compose-mysql.yaml \
 		-f docker-compose-keycloak.yaml \
@@ -204,7 +204,7 @@ compose-mysql:
 		up -d --wait
 
 reset-mysql:
-	CIE_KC_DB_TYPE=mysql docker compose \
+	CIEID_KC_DB_TYPE=mysql docker compose \
 		-f docker-compose-networks.yaml \
 		-f docker-compose-mysql.yaml \
 		-f docker-compose-keycloak.yaml \
@@ -224,7 +224,7 @@ full-mysql: setup-mysql test-responses
 # Postgres commands
 
 compose-postgres:
-	CIE_KC_DB_TYPE=postgres docker compose \
+	CIEID_KC_DB_TYPE=postgres docker compose \
 		-f docker-compose-networks.yaml \
 		-f docker-compose-postgres.yaml \
 		-f docker-compose-keycloak.yaml \
@@ -232,7 +232,7 @@ compose-postgres:
 		up -d --wait
 
 reset-postgres:
-	CIE_KC_DB_TYPE=postgres docker compose \
+	CIEID_KC_DB_TYPE=postgres docker compose \
 		-f docker-compose-networks.yaml \
 		-f docker-compose-postgres.yaml \
 		-f docker-compose-keycloak.yaml \

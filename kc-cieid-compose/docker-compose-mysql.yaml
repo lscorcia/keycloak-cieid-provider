@@ -3,18 +3,18 @@ volumes:
     driver: local
 
 services:
-  cie-mysql:
+  cieid-mysql:
     image: mysql:8.4 # Latest supported version -> https://www.keycloak.org/server/supported-configurations
-    container_name: "cie-mysql"
+    container_name: "cieid-mysql"
     networks:
-      - cie-local-network
+      - cieid-local-network
     ports:
       - 3306:3306
     environment:
-      MYSQL_ROOT_PASSWORD: ${CIE_DB_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${CIE_DB_SCHEMA}
-      MYSQL_USER: ${CIE_DB_USR}
-      MYSQL_PASSWORD: ${CIE_DB_PWD}
+      MYSQL_ROOT_PASSWORD: ${CIEID_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${CIEID_DB_SCHEMA}
+      MYSQL_USER: ${CIEID_DB_USR}
+      MYSQL_PASSWORD: ${CIEID_DB_PWD}
     healthcheck:
       test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
       start_period: 10s

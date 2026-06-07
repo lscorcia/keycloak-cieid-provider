@@ -1,9 +1,9 @@
-# Common cie-keycloak service; ${CIE_KC_DB_TYPE} environment variable can be set to match the db used in the infrastructure
+# Common cieid-keycloak service; ${CIEID_KC_DB_TYPE} environment variable can be set to match the db used in the infrastructure
 
 services:
-  cie-keycloak:
-    image: quay.io/keycloak/keycloak:${CIE_KC_VERSION}
-    container_name: "cie-keycloak"
+  cieid-keycloak:
+    image: quay.io/keycloak/keycloak:${CIEID_KC_VERSION}
+    container_name: "cieid-keycloak"
     command: "start-dev --import-realm --verbose"
     ports:
       - 8080:8080 # Standard http
@@ -16,20 +16,20 @@ services:
       KC_HEALTH_ENABLED: "true"
       KC_METRICS_ENABLED: "true"
       KC_LOG_LEVEL: "info"
-      KC_BOOTSTRAP_ADMIN_USERNAME: ${CIE_KC_ADMIN_USR}
-      KC_BOOTSTRAP_ADMIN_PASSWORD: ${CIE_KC_ADMIN_PWD}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${CIEID_KC_ADMIN_USR}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${CIEID_KC_ADMIN_PWD}
       KC_HTTPS_CERTIFICATE_FILE: /opt/keycloak/conf/server.crt
       KC_HTTPS_CERTIFICATE_KEY_FILE: /opt/keycloak/conf/server.key
       KC_HOSTNAME_STRICT: "false"
       KC_HTTP_RELATIVE_PATH: "/auth" # For backwards compatibility
-      DB: ${CIE_KC_DB_TYPE}
-      DB_URL_HOST: cie-${CIE_KC_DB_TYPE}
-      DB_SCHEMA: ${CIE_DB_SCHEMA}
-      DB_USERNAME: ${CIE_DB_USR}
-      DB_PASSWORD: ${CIE_DB_PWD}
+      DB: ${CIEID_KC_DB_TYPE}
+      DB_URL_HOST: cieid-${CIEID_KC_DB_TYPE}
+      DB_SCHEMA: ${CIEID_DB_SCHEMA}
+      DB_USERNAME: ${CIEID_DB_USR}
+      DB_PASSWORD: ${CIEID_DB_PWD}
     volumes:
       - ./realm:/opt/keycloak/data/import:ro
-      - ./provider/cie-provider.jar:/opt/keycloak/providers/cie-provider.jar:ro
+      - ./provider/cieid-provider.jar:/opt/keycloak/providers/cieid-provider.jar:ro
       - ./certificates/keycloak-server.crt:/opt/keycloak/conf/server.crt:ro
       - ./certificates/keycloak-server.key:/opt/keycloak/conf/server.key:ro
       - ./certificates/nginx.crt:/opt/keycloak/conf/truststores/nginx.crt:ro
@@ -45,6 +45,6 @@ services:
       timeout: 5s
       retries: 5
     networks:
-      - cie-local-network
+      - cieid-local-network
     depends_on:
-      - cie-${CIE_KC_DB_TYPE}
+      - cieid-${CIEID_KC_DB_TYPE}
