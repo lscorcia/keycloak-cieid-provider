@@ -1,6 +1,6 @@
 {
-  "id": "cie",
-  "realm": "cie",
+  "id": "cieid",
+  "realm": "cieid",
   "notBefore": 0,
   "revokeRefreshToken": false,
   "refreshTokenMaxReuse": 0,
@@ -48,7 +48,7 @@
         "description": "${role_offline-access}",
         "composite": false,
         "clientRole": false,
-        "containerId": "cie",
+        "containerId": "cieid",
         "attributes": {}
       },
       {
@@ -57,7 +57,7 @@
         "description": "${role_uma_authorization}",
         "composite": false,
         "clientRole": false,
-        "containerId": "cie",
+        "containerId": "cieid",
         "attributes": {}
       }
     ],
@@ -435,7 +435,7 @@
       "clientId": "account",
       "name": "${client_account}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/cie/account/",
+      "baseUrl": "/realms/cieid/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
@@ -446,7 +446,7 @@
         "manage-account"
       ],
       "redirectUris": [
-        "/realms/cie/account/*"
+        "/realms/cieid/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -482,14 +482,14 @@
       "clientId": "account-console",
       "name": "${client_account-console}",
       "rootUrl": "${authBaseUrl}",
-      "baseUrl": "/realms/cie/account/",
+      "baseUrl": "/realms/cieid/account/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "secret": "**********",
       "redirectUris": [
-        "/realms/cie/account/*"
+        "/realms/cieid/account/*"
       ],
       "webOrigins": [],
       "notBefore": 0,
@@ -675,14 +675,14 @@
       "clientId": "security-admin-console",
       "name": "${client_security-admin-console}",
       "rootUrl": "${authAdminUrl}",
-      "baseUrl": "/admin/cie/console/",
+      "baseUrl": "/admin/cieid/console/",
       "surrogateAuthRequired": false,
       "enabled": true,
       "alwaysDisplayInConsole": false,
       "clientAuthenticatorType": "client-secret",
       "secret": "**********",
       "redirectUris": [
-        "/admin/cie/console/*"
+        "/admin/cieid/console/*"
       ],
       "webOrigins": [
         "+"
@@ -1778,7 +1778,7 @@
     },
     {
       "id": "577106dd-5ad5-4814-99a5-ef99790e9c58",
-      "alias": "first broker login CIE",
+      "alias": "first broker login CIEID",
       "description": "Actions taken after first broker login with identity provider account, which is not yet linked to any Keycloak account",
       "providerId": "basic-flow",
       "topLevel": true,
@@ -1795,7 +1795,7 @@
         {
           "requirement": "REQUIRED",
           "priority": 20,
-          "flowAlias": "first broker login CIE User creation or linking",
+          "flowAlias": "first broker login CIEID User creation or linking",
           "userSetupAllowed": false,
           "autheticatorFlow": true
         }
@@ -1803,7 +1803,7 @@
     },
     {
       "id": "1488f6d1-ecee-4d54-907c-b46f21962213",
-      "alias": "first broker login CIE Account verification options",
+      "alias": "first broker login CIEID Account verification options",
       "description": "Method with which to verity the existing account",
       "providerId": "basic-flow",
       "topLevel": false,
@@ -1819,7 +1819,7 @@
         {
           "requirement": "ALTERNATIVE",
           "priority": 20,
-          "flowAlias": "first broker login CIE Verify Existing Account by Re-authentication",
+          "flowAlias": "first broker login CIEID Verify Existing Account by Re-authentication",
           "userSetupAllowed": false,
           "autheticatorFlow": true
         }
@@ -1827,7 +1827,7 @@
     },
     {
       "id": "d85bc459-b2b0-41e1-a899-89f2368be95e",
-      "alias": "first broker login CIE First broker login - Conditional OTP",
+      "alias": "first broker login CIEID First broker login - Conditional OTP",
       "description": "Flow to determine if the OTP is required for the authentication",
       "providerId": "basic-flow",
       "topLevel": false,
@@ -1851,7 +1851,7 @@
     },
     {
       "id": "be5570ea-1437-41d7-bfa0-d7d28da61cc6",
-      "alias": "first broker login CIE Handle Existing Account",
+      "alias": "first broker login CIEID Handle Existing Account",
       "description": "Handle what to do if there is existing account with same email/username like authenticated identity provider",
       "providerId": "basic-flow",
       "topLevel": false,
@@ -1874,7 +1874,7 @@
         {
           "requirement": "DISABLED",
           "priority": 21,
-          "flowAlias": "first broker login CIE Account verification options",
+          "flowAlias": "first broker login CIEID Account verification options",
           "userSetupAllowed": false,
           "autheticatorFlow": true
         }
@@ -1882,7 +1882,7 @@
     },
     {
       "id": "7b71c64d-315e-48eb-bad4-7000150bb6b6",
-      "alias": "first broker login CIE User creation or linking",
+      "alias": "first broker login CIEID User creation or linking",
       "description": "Flow for the existing/non-existing user alternatives",
       "providerId": "basic-flow",
       "topLevel": false,
@@ -1899,7 +1899,7 @@
         {
           "requirement": "ALTERNATIVE",
           "priority": 20,
-          "flowAlias": "first broker login CIE Handle Existing Account",
+          "flowAlias": "first broker login CIEID Handle Existing Account",
           "userSetupAllowed": false,
           "autheticatorFlow": true
         }
@@ -1907,7 +1907,7 @@
     },
     {
       "id": "345564f4-22aa-4e39-9860-5e0c91cec114",
-      "alias": "first broker login CIE Verify Existing Account by Re-authentication",
+      "alias": "first broker login CIEID Verify Existing Account by Re-authentication",
       "description": "Reauthentication of existing account",
       "providerId": "basic-flow",
       "topLevel": false,
@@ -1923,7 +1923,7 @@
         {
           "requirement": "CONDITIONAL",
           "priority": 20,
-          "flowAlias": "first broker login CIE First broker login - Conditional OTP",
+          "flowAlias": "first broker login CIEID First broker login - Conditional OTP",
           "userSetupAllowed": false,
           "autheticatorFlow": true
         }
