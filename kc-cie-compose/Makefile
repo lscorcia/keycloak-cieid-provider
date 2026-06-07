@@ -11,9 +11,9 @@ _sleep:
 	@sleep 10
 
 build-provider-jar:
-	rm -rf ${PWD}/provider/cie-provider.jar
+	rm -rf ${PWD}/provider/cieid-provider.jar
 	make -C ${PWD}/.. build
-	cp ${PWD}/../target/cie-provider.jar ${PWD}/provider/cie-provider.jar
+	cp ${PWD}/../target/cieid-provider.jar ${PWD}/provider/cieid-provider.jar
 
 create-configuration-client-docker-image:
 # Cancellazione directory temporanea
@@ -21,8 +21,8 @@ create-configuration-client-docker-image:
 #Creazione directory temporanea per dowload dei sorgenti
 	mkdir ${PWD}/tmp-docker-configuration-client
 	cd ${PWD}/tmp-docker-configuration-client
-	git clone https://github.com/polifr/keycloak-cie-provider-configuration-client.git
-	docker build --tag cieclient:latest-KC ./keycloak-cie-provider-configuration-client
+	git clone https://github.com/polifr/keycloak-cieid-provider-configuration-client.git
+	docker build --tag cieidclient:latest-KC ./keycloak-cieid-provider-configuration-client
 	cd -
 # Cancellazione directory temporanea
 	rm -rf ${PWD}/tmp-docker-configuration-client
@@ -97,7 +97,7 @@ run-configuration-client:
 		--user "$(id -u):$(id -g)" \
 		-v "${PWD}/configuration-client:/opt/mount:rw" \
 		--rm \
-		--entrypoint cp cieclient:latest-KC /usr/src/app/.env-example /opt/mount/.env-example
+		--entrypoint cp cieidclient:latest-KC /usr/src/app/.env-example /opt/mount/.env-example
 	cat ${PWD}/configuration-client/.env-example \
 		| sed 's,realm = cied,realm = cie,g' \
 		| sed 's,createSpidSpTestIdP = false,createSpidSpTestIdP = true,g' \
@@ -109,7 +109,7 @@ run-configuration-client:
 		-ti --rm \
 		-v "${PWD}/configuration-client/.env:/usr/src/app/.env:ro" \
 		-v "${PWD}/configuration-client/log:/usr/src/app/log:rw" \
-		cieclient:latest-KC
+		cieidclient:latest-KC
 
 
 # Test commands
