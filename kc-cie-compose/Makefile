@@ -82,8 +82,8 @@ create-spid-sp-test-metadata-certificates:
 
 # spid-sp-test.xml medadata file generation
 	docker run --net=host --rm -t \
-		-e IDP_CERT_PATH=/cie/ipd-certs \
-		-v "${PWD}/certificates/spid-sp-test-idp:/cie/ipd-certs" \
+		-e IDP_CERT_PATH=/spid/ipd-certs \
+		-v "${PWD}/certificates/spid-sp-test-idp:/spid/ipd-certs" \
 		italia/spid-sp-test:0.9.0-KC --idp-metadata \
 		| sed '/^[[:space:]]*</!d' \
 		| sed 's/WantAuthnRequestsSigned="false"/WantAuthnRequestsSigned="true" WantAssertionsSigned="false"/' \
@@ -99,6 +99,7 @@ run-configuration-client:
 		--rm \
 		--entrypoint cp cieclient:latest-KC /usr/src/app/.env-example /opt/mount/.env-example
 	cat ${PWD}/configuration-client/.env-example \
+		| sed 's,realm = cied,realm = cie,g' \
 		| sed 's,createSpidSpTestIdP = false,createSpidSpTestIdP = true,g' \
 		| sed 's,https://yourdomain.com/spid-sp-test.xml,https://cie-nginx:443/spid-sp-test.xml,g' \
 		> ${PWD}/configuration-client/.env
@@ -116,21 +117,21 @@ run-configuration-client:
 test-metadata:
 	mkdir -p ${PWD}/tests/report/$(NOW)_metadata
 	docker run -ti --net=host --rm \
-		-e IDP_CERT_PATH=/cie/ipd-certs \
-		-v "${PWD}/certificates/spid-sp-test-idp:/cie/ipd-certs" \
-		-v "${PWD}/tests/report/$(NOW)_metadata:/cie/html_report:rw" \
+		-e IDP_CERT_PATH=/spid/ipd-certs \
+		-v "${PWD}/certificates/spid-sp-test-idp:/spid/ipd-certs" \
+		-v "${PWD}/tests/report/$(NOW)_metadata:/spid/html_report:rw" \
 		italia/spid-sp-test:0.9.0-KC \
-		--metadata-url "https://localhost:8443/auth/realms/cie/cie-sp-metadata" \
+		--metadata-url "https://localhost:8443/auth/realms/cie/cieid-sp-metadata" \
 		--extra --report_format html --report-output-file html_report/
 
 test-authn:
 	mkdir -p ${PWD}/tests/report/$(NOW)_authn
 	docker run -ti --net=host --rm \
-		-e IDP_CERT_PATH=/cie/ipd-certs \
-		-v "${PWD}/certificates/spid-sp-test-idp:/cie/ipd-certs" \
-		-v "${PWD}/tests/report/$(NOW)_authn:/cie/html_report:rw" \
+		-e IDP_CERT_PATH=/spid/ipd-certs \
+		-v "${PWD}/certificates/spid-sp-test-idp:/spid/ipd-certs" \
+		-v "${PWD}/tests/report/$(NOW)_authn:/spid/html_report:rw" \
 		italia/spid-sp-test:0.9.0-KC \
-		--metadata-url "https://localhost:8443/auth/realms/cie/cie-sp-metadata" \
+		--metadata-url "https://localhost:8443/auth/realms/cie/cieid-sp-metadata" \
 		--authn-url "https://localhost:8443/auth/realms/cie/protocol/openid-connect/auth?client_id=account&scope=openid&response_type=code&redirect_uri=https://localhost:8443/auth/realms/cie/account&state=12345&kc_idp_hint=cie-spid-sp-test" \
 		--extra --report_format html --report-output-file html_report/
 
@@ -138,12 +139,12 @@ test-responses:
 	mkdir -p ${PWD}/tests/report/$(NOW)_responses
 	mkdir -p ${PWD}/tests/dumps/$(NOW)_responses
 	docker run -ti --net=host --rm \
-		-e IDP_CERT_PATH=/cie/ipd-certs \
-		-v "${PWD}/certificates/spid-sp-test-idp:/cie/ipd-certs" \
-		-v "${PWD}/tests/report/$(NOW)_responses:/cie/html_report:rw" \
-		-v "${PWD}/tests/dumps/$(NOW)_responses:/cie/dumps:rw" \
+		-e IDP_CERT_PATH=/spid/ipd-certs \
+		-v "${PWD}/certificates/spid-sp-test-idp:/spid/ipd-certs" \
+		-v "${PWD}/tests/report/$(NOW)_responses:/spid/html_report:rw" \
+		-v "${PWD}/tests/dumps/$(NOW)_responses:/spid/dumps:rw" \
 		italia/spid-sp-test:0.9.0-KC \
-		--metadata-url "https://localhost:8443/auth/realms/cie/cie-sp-metadata" \
+		--metadata-url "https://localhost:8443/auth/realms/cie/cieid-sp-metadata" \
 		--authn-url "https://localhost:8443/auth/realms/cie/protocol/openid-connect/auth?client_id=account&scope=openid&response_type=code&redirect_uri=https://localhost:8443/auth/realms/cie/account&state=12345&kc_idp_hint=cie-spid-sp-test" \
 		--extra --report_format html --report-output-file html_report/ \
 		--test-response --response-html-dumps dumps/
