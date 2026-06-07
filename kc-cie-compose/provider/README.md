@@ -1,1 +1,1 @@
-Directory contenente il jar cie-provider.jar, creato tramite compilazione.
+Directory contenente il jar cieid-provider.jar, creato tramite compilazione.
