@@ -1,0 +1,24 @@
+volumes:
+  postgres-volume:
+    driver: local
+
+services:
+  cie-postgres:
+    image: postgres:18.4 # Latest supported version -> https://www.keycloak.org/server/supported-configurations
+    container_name: "cie-postgres"
+    networks:
+      - cie-local-network
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_DB: ${CIE_DB_SCHEMA}
+      POSTGRES_USER: ${CIE_DB_USR}
+      POSTGRES_PASSWORD: ${CIE_DB_PWD}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "${CIE_DB_USR}", "-d", "${CIE_DB_SCHEMA}"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres-volume:/var/lib/postgresql/18/docker

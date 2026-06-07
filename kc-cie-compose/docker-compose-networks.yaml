@@ -1,0 +1,3 @@
+networks:
+  cie-local-network:
+    driver: bridge
