@@ -8,7 +8,7 @@ services:
       - 80:80 # Standard http
       - 443:443 # Standard https
     volumes:
-      - ./tests/cieid-sp-test.xml:/usr/share/nginx/html/cieid-sp-test.xml:ro
+      - ./tests/spid-sp-test.xml:/usr/share/nginx/html/spid-sp-test.xml:ro
       - ./certificates/nginx.crt:/etc/ssl/certs/nginx.crt:ro
       - ./certificates/nginx.key:/etc/ssl/private/nginx.key:ro
       - ./nginx/secure-nginx.conf:/etc/nginx/conf.d/secure-nginx.conf:ro

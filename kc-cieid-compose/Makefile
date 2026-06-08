@@ -99,6 +99,7 @@ run-configuration-client:
 		--rm \
 		--entrypoint cp cieidclient:latest-KC /usr/src/app/.env-example /opt/mount/.env-example
 	cat ${PWD}/configuration-client/.env-example \
+		| sed 's,keycloakServerBaseURL = http://localhost:8080,keycloakServerBaseURL = https://localhost:8443/auth,g' \
 		| sed 's,realm = cied,realm = cieid,g' \
 		| sed 's,createSpidSpTestIdP = false,createSpidSpTestIdP = true,g' \
 		| sed 's,https://yourdomain.com/spid-sp-test.xml,https://cieid-nginx:443/spid-sp-test.xml,g' \
