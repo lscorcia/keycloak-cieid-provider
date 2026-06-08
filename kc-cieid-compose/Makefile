@@ -53,8 +53,8 @@ create-spid-sp-test-docker-image:
 
 	git clone -b fixes-2025 https://github.com/nicolabeghin/spid-sp-test.git
 
-	sed -i "s#<ds:X509Certificate />#<ds:X509Certificate>$$(grep -v CERTIFICATE ./spid-sp-test/src/cie_sp_test/responses/certificates/test_public.cert | tr -d '\n')</ds:X509Certificate>#" \
-		./spid-sp-test/src/cie_sp_test/responses/settings.py
+	sed -i "s#<ds:X509Certificate />#<ds:X509Certificate>$$(grep -v CERTIFICATE ./spid-sp-test/src/spid_sp_test/responses/certificates/test_public.cert | tr -d '\n')</ds:X509Certificate>#" \
+		./spid-sp-test/src/spid_sp_test/responses/settings.py
 
 	docker build --tag italia/spid-sp-test:0.9.0-KC ./spid-sp-test
 
