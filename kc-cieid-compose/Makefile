@@ -123,6 +123,7 @@ test-metadata:
 		-v "${PWD}/tests/report/$(NOW)_metadata:/spid/html_report:rw" \
 		italia/spid-sp-test:0.9.0-KC \
 		--metadata-url "https://localhost:8443/auth/realms/cieid/cieid-sp-metadata" \
+		--profile cie-sp-public \
 		--extra --report_format html --report-output-file html_report/
 
 test-authn:
@@ -134,6 +135,7 @@ test-authn:
 		italia/spid-sp-test:0.9.0-KC \
 		--metadata-url "https://localhost:8443/auth/realms/cieid/cieid-sp-metadata" \
 		--authn-url "https://localhost:8443/auth/realms/cieid/protocol/openid-connect/auth?client_id=account&scope=openid&response_type=code&redirect_uri=https://localhost:8443/auth/realms/cieid/account&state=12345&kc_idp_hint=cieid-spid-sp-test" \
+		--profile cie-sp-public \
 		--extra --report_format html --report-output-file html_report/
 
 test-responses:
@@ -147,6 +149,7 @@ test-responses:
 		italia/spid-sp-test:0.9.0-KC \
 		--metadata-url "https://localhost:8443/auth/realms/cieid/cieid-sp-metadata" \
 		--authn-url "https://localhost:8443/auth/realms/cieid/protocol/openid-connect/auth?client_id=account&scope=openid&response_type=code&redirect_uri=https://localhost:8443/auth/realms/cieid/account&state=12345&kc_idp_hint=cieid-spid-sp-test" \
+		--profile cie-sp-public \
 		--extra --report_format html --report-output-file html_report/ \
 		--test-response --response-html-dumps dumps/
 
