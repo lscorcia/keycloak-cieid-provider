@@ -17,7 +17,6 @@
 package org.keycloak.broker.cieid;
 
 import org.jboss.logging.Logger;
-import org.keycloak.Config;
 import org.keycloak.dom.saml.v2.protocol.AuthnContextComparisonType;
 import org.keycloak.dom.saml.v2.protocol.StatusResponseType;
 import org.keycloak.protocol.saml.SamlProtocol;
