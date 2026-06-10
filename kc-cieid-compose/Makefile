@@ -114,7 +114,7 @@ run-configuration-client:
 		--user "$(id -u):$(id -g)" \
 		--net=host \
 		-w /usr/src/app \
-		-ti --rm \
+		-t --rm \
 		-v "${PWD}/configuration-client/.env:/usr/src/app/.env:ro" \
 		-v "${PWD}/configuration-client/log:/usr/src/app/log:rw" \
 		cieidclient:latest-KC
@@ -124,7 +124,7 @@ run-configuration-client:
 
 test-metadata:
 	mkdir -p ${PWD}/tests/report/$(NOW)_metadata
-	docker run -ti --net=host --rm \
+	docker run -t --net=host --rm \
 		--user "$(id -u):$(id -g)" \
 		-e IDP_CERT_PATH=/spid/ipd-certs \
 		-v "${PWD}/certificates/spid-sp-test-idp:/spid/ipd-certs" \
@@ -136,7 +136,7 @@ test-metadata:
 
 test-authn:
 	mkdir -p ${PWD}/tests/report/$(NOW)_authn
-	docker run -ti --net=host --rm \
+	docker run -t --net=host --rm \
 		--user "$(id -u):$(id -g)" \
 		-e IDP_CERT_PATH=/spid/ipd-certs \
 		-v "${PWD}/certificates/spid-sp-test-idp:/spid/ipd-certs" \
@@ -150,7 +150,7 @@ test-authn:
 test-responses:
 	mkdir -p ${PWD}/tests/report/$(NOW)_responses
 	mkdir -p ${PWD}/tests/dumps/$(NOW)_responses
-	docker run -ti --net=host --rm \
+	docker run -t --net=host --rm \
 		--user "$(id -u):$(id -g)" \
 		-e IDP_CERT_PATH=/spid/ipd-certs \
 		-v "${PWD}/certificates/spid-sp-test-idp:/spid/ipd-certs" \
