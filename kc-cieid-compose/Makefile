@@ -43,6 +43,7 @@ create-self-signed-certificates:
 		-subj "/C=IT/ST=MI/L=Milan/O=AgID/OU=Servizio Accreditamento/CN=cieid-nginx" \
 		-addext "subjectAltName = DNS:cieid-nginx, DNS:cieid-nginx:443, DNS:localhost:443"
 
+
 create-spid-sp-test-docker-image:
 # Cancellazione directory temporanea
 	rm -rf ${PWD}/tmp-docker-spid-sp-test
@@ -63,6 +64,7 @@ create-spid-sp-test-docker-image:
 # Cancellazione directory temporanea
 	rm -rf ${PWD}/tmp-docker-spid-sp-test
 
+
 create-spid-sp-test-metadata-certificates:
 # Creazione certificati idp aggiornati
 	rm -rf ${PWD}/certificates/spid-sp-test-idp
@@ -72,7 +74,7 @@ create-spid-sp-test-metadata-certificates:
 		-v "${PWD}/certificates/spid-sp-test-idp:/spid:rw" \
 		--entrypoint "spid-compliant-certificates" -t italia/spid-sp-test:0.9.0-KC generator \
 		--key-size 3072 --common-name "agid.gov.it" --days 7650 --entity-id https://localhost:8443 \
-		--locality-name Roma --org-id "PA:IT-c_h501" --org-name "AgID TEST" --sector public	
+		--locality-name Roma --org-id "PA:IT-c_h501" --org-name "AgID TEST" --sector public --debug DEBUG
 
 	mv ${PWD}/certificates/spid-sp-test-idp/crt.pem ${PWD}/certificates/spid-sp-test-idp/public.cert
 	mv ${PWD}/certificates/spid-sp-test-idp/key.pem ${PWD}/certificates/spid-sp-test-idp/private.key
@@ -83,8 +85,8 @@ create-spid-sp-test-metadata-certificates:
 # spid-sp-test.xml medadata file generation
 	docker run --net=host --rm -t \
 		-e IDP_CERT_PATH=/spid/ipd-certs \
-		-v "${PWD}/certificates/spid-sp-test-idp:/spid/ipd-certs:rw" \
-		italia/spid-sp-test:0.9.0-KC --idp-metadata \
+		-v "${PWD}/certificates/spid-sp-test-idp:/spid/ipd-certs:ro" \
+		italia/spid-sp-test:0.9.0-KC --idp-metadata --debug DEBUG \
 		| sed '/^[[:space:]]*</!d' \
 		| sed 's/WantAuthnRequestsSigned="false"/WantAuthnRequestsSigned="true" WantAssertionsSigned="false"/' \
 		> ${PWD}/tests/spid-sp-test.xml
