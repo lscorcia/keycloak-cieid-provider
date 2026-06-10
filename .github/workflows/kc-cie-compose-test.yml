@@ -29,3 +29,30 @@ jobs:
         working-directory: kc-cieid-compose
         run: |
           make full-mariadb
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spid-sp-test-report
+          path: |
+            kc-cieid-compose/tests/report/**
+            kc-cieid-compose/tests/dumps/**
+
+      - name: Collect docker logs
+        if: always()
+        run: |
+          mkdir -p docker-logs
+          docker logs cieid-keycloak > docker-logs/keycloak.log 2>&1 || true
+          docker logs cieid-nginx > docker-logs/nginx.log 2>&1 || true
+          docker logs cieid-mariadb > docker-logs/mariadb.log 2>&1 || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: docker-logs
+          path: docker-logs
+
+      - name: Cleanup
+        if: always()
+        run: make clean
