@@ -29,12 +29,13 @@ create-configuration-client-docker-image:
 
 create-self-signed-certificates:
 # Key and crt files generation for keycloak
-	rm -rf ${PWD}/certificates/keycloak-server.key ${PWD}/certificates/keycloak-server
+	rm -rf ${PWD}/certificates/keycloak-server.key ${PWD}/certificates/keycloak-server.crt
 	openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
 		-keyout ${PWD}/certificates/keycloak-server.key \
 		-out ${PWD}/certificates/keycloak-server.crt \
 		-subj "/C=IT/ST=MI/L=Milan/O=AgID/OU=Keycloak/CN=keycloak" \
 		-addext "subjectAltName = DNS:cieid-keycloak, DNS:cieid-keycloak:8443, DNS:localhost:8443"
+	chmod a+r ${PWD}/certificates/keycloak-server.key ${PWD}/certificates/keycloak-server.crt
 # Key and crt files generation for nginx
 	rm -rf ${PWD}/certificates/nginx.key ${PWD}/certificates/nginx.crt
 	openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
@@ -42,6 +43,7 @@ create-self-signed-certificates:
 		-out ${PWD}/certificates/nginx.crt \
 		-subj "/C=IT/ST=MI/L=Milan/O=AgID/OU=Servizio Accreditamento/CN=cieid-nginx" \
 		-addext "subjectAltName = DNS:cieid-nginx, DNS:cieid-nginx:443, DNS:localhost:443"
+	chmod a+r ${PWD}/certificates/nginx.key ${PWD}/certificates/nginx.crt
 
 
 create-spid-sp-test-docker-image:
