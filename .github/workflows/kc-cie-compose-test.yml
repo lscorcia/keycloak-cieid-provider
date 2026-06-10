@@ -26,5 +26,6 @@ jobs:
           docker compose version
 
       - name: Run kc-cieid-compose tests
+        working-directory: kc-cieid-compose
         run: |
           make full-mariadb
