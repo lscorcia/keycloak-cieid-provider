@@ -15,6 +15,7 @@ on:
 jobs:
   integration-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     steps:
       - name: Checkout repository
@@ -32,8 +33,7 @@ jobs:
       - name: Run kc-cieid-compose tests
         working-directory: kc-cieid-compose
         run: |
-          make clean
-          make init
+          make full-mariadb
 
       - name: Upload kc-cieid-compose (debug)
         if: always()
