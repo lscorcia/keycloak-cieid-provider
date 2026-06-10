@@ -25,10 +25,15 @@ jobs:
           docker version
           docker compose version
 
+      - name: Verify connectivity
+        run: |
+          curl -L -I https://indicepa.gov.it:443
+
       - name: Run kc-cieid-compose tests
         working-directory: kc-cieid-compose
         run: |
-          make full-mariadb
+          make clean
+          make init
 
       - name: Upload kc-cieid-compose (debug)
         if: always()
