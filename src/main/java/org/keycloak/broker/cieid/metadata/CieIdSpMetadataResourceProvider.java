@@ -34,7 +34,10 @@ import org.keycloak.dom.saml.v2.metadata.LocalizedURIType;
 import org.keycloak.dom.saml.v2.metadata.OrganizationType;
 import org.keycloak.dom.saml.v2.metadata.SPSSODescriptorType;
 import org.keycloak.models.KeyManager;
+import org.keycloak.models.KeyManager.ActiveRsaKey;
 import org.keycloak.models.IdentityProviderModel;
+import org.keycloak.models.IdentityProviderQuery;
+import org.keycloak.models.IdentityProviderStorageProvider;
 import org.keycloak.models.KeycloakSession;
 import org.keycloak.models.RealmModel;
 import org.keycloak.saml.SPMetadataDescriptor;
@@ -73,6 +76,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.keycloak.broker.cieid.CieIdIdentityProvider;
+import org.keycloak.broker.cieid.CieIdIdentityProviderConfig;
 import org.keycloak.broker.cieid.CieIdIdentityProviderFactory;
 import org.keycloak.broker.provider.IdentityProviderMapper;
 
@@ -100,7 +104,8 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
         {
             // Retrieve all enabled CIE ID Identity Providers for this realms
             RealmModel realm = session.getContext().getRealm();
-            List<IdentityProviderModel> lstCieIdIdentityProviders = realm.getIdentityProvidersStream()
+            IdentityProviderStorageProvider identityProviderStorage = session.identityProviders();
+            List<IdentityProviderModel> lstCieIdIdentityProviders = identityProviderStorage.getAllStream(IdentityProviderQuery.userAuthentication())
                 .filter(t -> t.getProviderId().equals(CieIdIdentityProviderFactory.PROVIDER_ID) &&
                     t.isEnabled())
                 .sorted((o1,o2)-> o1.getAlias().compareTo(o2.getAlias()))
@@ -112,6 +117,7 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
             // Create an instance of the first CIE ID Identity Provider in alphabetical order
             CieIdIdentityProviderFactory providerFactory = new CieIdIdentityProviderFactory();
             CieIdIdentityProvider firstCieIdProvider = providerFactory.create(session, lstCieIdIdentityProviders.get(0));
+            CieIdIdentityProviderConfig config = firstCieIdProvider.getConfig();
 
             // Retrieve the context URI
             UriInfo uriInfo = session.getContext().getUri();
@@ -119,25 +125,25 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
             //
             URI authnBinding = JBossSAMLURIConstants.SAML_HTTP_REDIRECT_BINDING.getUri();
 
-            if (firstCieIdProvider.getConfig().isPostBindingAuthnRequest()) {
+            if (config.isPostBindingAuthnRequest()) {
                 authnBinding = JBossSAMLURIConstants.SAML_HTTP_POST_BINDING.getUri();
             }
 
             URI endpoint = uriInfo.getBaseUriBuilder()
                     .path("realms").path(realm.getName())
                     .path("broker")
-                    .path(firstCieIdProvider.getConfig().getAlias())
+                    .path(config.getAlias())
                     .path("endpoint")
                     .build();
 
-            boolean wantAuthnRequestsSigned = firstCieIdProvider.getConfig().isWantAuthnRequestsSigned();
-            boolean wantAssertionsSigned = firstCieIdProvider.getConfig().isWantAssertionsSigned();
-            boolean wantAssertionsEncrypted = firstCieIdProvider.getConfig().isWantAssertionsEncrypted();
-            String configEntityId = firstCieIdProvider.getConfig().getEntityId();
+            boolean wantAuthnRequestsSigned = config.isWantAuthnRequestsSigned();
+            boolean wantAssertionsSigned = config.isWantAssertionsSigned();
+            boolean wantAssertionsEncrypted = config.isWantAssertionsEncrypted();
+            String configEntityId = config.getEntityId();
             String entityId = getEntityId(configEntityId, uriInfo, realm);
-            String nameIDPolicyFormat = firstCieIdProvider.getConfig().getNameIDPolicyFormat();
-            int attributeConsumingServiceIndex = firstCieIdProvider.getConfig().getAttributeConsumingServiceIndex() != null ? firstCieIdProvider.getConfig().getAttributeConsumingServiceIndex(): 1;
-            String attributeConsumingServiceName = firstCieIdProvider.getConfig().getAttributeConsumingServiceName();
+            String nameIDPolicyFormat = config.getNameIDPolicyFormat();
+            int attributeConsumingServiceIndex = config.getAttributeConsumingServiceIndex() != null ? config.getAttributeConsumingServiceIndex(): 1;
+            String attributeConsumingServiceName = config.getAttributeConsumingServiceName();
 
             List<KeyDescriptorType> signingKeys = new LinkedList<>();
             List<KeyDescriptorType> encryptionKeys = new LinkedList<>();
@@ -150,10 +156,10 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
                         try {
                             Element element = SPMetadataDescriptor
                                     .buildKeyInfoElement(key.getKid(), PemUtils.encodeCertificate(key.getCertificate()));
-                            signingKeys.add(SPMetadataDescriptor.buildKeyDescriptorType(element, KeyTypes.SIGNING, null));
+                            signingKeys.add(SPMetadataDescriptor.buildKeyDescriptorType(element, KeyTypes.SIGNING));
 
                             if (key.getStatus() == KeyStatus.ACTIVE) {
-                                encryptionKeys.add(SPMetadataDescriptor.buildKeyDescriptorType(element, KeyTypes.ENCRYPTION, null));
+                                encryptionKeys.add(SPMetadataDescriptor.buildKeyDescriptorType(element, KeyTypes.ENCRYPTION));
                             }
                         } catch (ParserConfigurationException e) {
                             logger.warn("Failed to export SAML SP Metadata!", e);
@@ -196,7 +202,7 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
             }
             
             // Add the attribute mappers
-            realm.getIdentityProviderMappersByAliasStream(firstCieIdProvider.getConfig().getAlias())
+            identityProviderStorage.getMappersByAliasStream(config.getAlias())
                 .forEach(mapper -> {
                     IdentityProviderMapper target = (IdentityProviderMapper) session.getKeycloakSessionFactory().getProviderFactory(IdentityProviderMapper.class, mapper.getIdentityProviderMapper());
                     if (target instanceof SamlMetadataDescriptorUpdater)
@@ -207,38 +213,38 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
                 });
 				
 			// Additional EntityDescriptor customizations
-            String strOrganizationNames = firstCieIdProvider.getConfig().getOrganizationNames();
+            String strOrganizationNames = config.getOrganizationNames();
             String[] organizationNames = strOrganizationNames != null ? strOrganizationNames.split(","): null;
 
-            String strOrganizationDisplayNames = firstCieIdProvider.getConfig().getOrganizationDisplayNames();
+            String strOrganizationDisplayNames = config.getOrganizationDisplayNames();
             String[] organizationDisplayNames = strOrganizationDisplayNames != null ? strOrganizationDisplayNames.split(","): null;
 
-            String strOrganizationUrls = firstCieIdProvider.getConfig().getOrganizationUrls();
+            String strOrganizationUrls = config.getOrganizationUrls();
             String[] organizationUrls = strOrganizationUrls != null ? strOrganizationUrls.split(","): null;
 
-            boolean isSpPrivate = firstCieIdProvider.getConfig().isSpPrivate();
-            String ipaCode = firstCieIdProvider.getConfig().getIpaCode();
-            String ipaCategory = firstCieIdProvider.getConfig().getIpaCategory();
-            String administrativeContactCompany = firstCieIdProvider.getConfig().getAdministrativeContactCompany();
-            String administrativeContactVatNumber = firstCieIdProvider.getConfig().getAdministrativeContactVatNumber();
-            String administrativeContactFiscalCode = firstCieIdProvider.getConfig().getAdministrativeContactFiscalCode();
-            String administrativeContactEmail = firstCieIdProvider.getConfig().getAdministrativeContactEmail();
-            String administrativeContactPhone = firstCieIdProvider.getConfig().getAdministrativeContactPhone();
-            String strAdministrativeContactNace2Codes = firstCieIdProvider.getConfig().getAdministrativeContactNace2Codes();
+            boolean isSpPrivate = config.isSpPrivate();
+            String ipaCode = config.getIpaCode();
+            String ipaCategory = config.getIpaCategory();
+            String administrativeContactCompany = config.getAdministrativeContactCompany();
+            String administrativeContactVatNumber = config.getAdministrativeContactVatNumber();
+            String administrativeContactFiscalCode = config.getAdministrativeContactFiscalCode();
+            String administrativeContactEmail = config.getAdministrativeContactEmail();
+            String administrativeContactPhone = config.getAdministrativeContactPhone();
+            String strAdministrativeContactNace2Codes = config.getAdministrativeContactNace2Codes();
             String[] administrativeContactNace2Codes = strAdministrativeContactNace2Codes != null ? strAdministrativeContactNace2Codes.split(","): null;
-            String administrativeContactMunicipality = firstCieIdProvider.getConfig().getAdministrativeContactMunicipality();
-            String administrativeContactProvince = firstCieIdProvider.getConfig().getAdministrativeContactProvince();
-            String administrativeContactCountry = firstCieIdProvider.getConfig().getAdministrativeContactCountry();
-            String technicalContactCompany = firstCieIdProvider.getConfig().getTechnicalContactCompany();
-            String technicalContactVatNumber = firstCieIdProvider.getConfig().getTechnicalContactVatNumber();
-            String technicalContactFiscalCode = firstCieIdProvider.getConfig().getTechnicalContactFiscalCode();
-            String technicalContactEmail = firstCieIdProvider.getConfig().getTechnicalContactEmail(); 
-            String technicalContactPhone = firstCieIdProvider.getConfig().getTechnicalContactPhone();
-            String strTechnicalContactNace2Codes = firstCieIdProvider.getConfig().getTechnicalContactNace2Codes();
+            String administrativeContactMunicipality = config.getAdministrativeContactMunicipality();
+            String administrativeContactProvince = config.getAdministrativeContactProvince();
+            String administrativeContactCountry = config.getAdministrativeContactCountry();
+            String technicalContactCompany = config.getTechnicalContactCompany();
+            String technicalContactVatNumber = config.getTechnicalContactVatNumber();
+            String technicalContactFiscalCode = config.getTechnicalContactFiscalCode();
+            String technicalContactEmail = config.getTechnicalContactEmail(); 
+            String technicalContactPhone = config.getTechnicalContactPhone();
+            String strTechnicalContactNace2Codes = config.getTechnicalContactNace2Codes();
             String[] technicalContactNace2Codes = strTechnicalContactNace2Codes!= null ? strTechnicalContactNace2Codes.split(","): null;
-            String technicalContactMunicipality = firstCieIdProvider.getConfig().getTechnicalContactMunicipality();
-            String technicalContactProvince = firstCieIdProvider.getConfig().getTechnicalContactProvince();
-            String technicalContactCountry = firstCieIdProvider.getConfig().getTechnicalContactCountry();
+            String technicalContactMunicipality = config.getTechnicalContactMunicipality();
+            String technicalContactProvince = config.getTechnicalContactProvince();
+            String technicalContactCountry = config.getTechnicalContactCountry();
 
 			// Additional EntityDescriptor customizations
             customizeEntityDescriptor(entityDescriptor,
@@ -290,9 +296,9 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
             String descriptor = sw.toString();
 
             // Metadata signing
-            if (firstCieIdProvider.getConfig().isSignSpMetadata()) {
-                KeyManager.ActiveRsaKey activeKey = session.keys().getActiveRsaKey(realm);
-                String keyName = firstCieIdProvider.getConfig().getXmlSigKeyInfoKeyNameTransformer().getKeyName(activeKey.getKid(), activeKey.getCertificate());
+            if (config.isSignSpMetadata()) {
+                KeyManager.ActiveRsaKey activeKey = new ActiveRsaKey(session.keys().getActiveKey(realm, KeyUse.SIG, Algorithm.RS256));
+                String keyName = config.getXmlSigKeyInfoKeyNameTransformer().getKeyName(activeKey.getKid(), activeKey.getCertificate());
                 KeyPair keyPair = new KeyPair(activeKey.getPublicKey(), activeKey.getPrivateKey());
 
                 Document metadataDocument = DocumentUtil.getDocument(descriptor);
