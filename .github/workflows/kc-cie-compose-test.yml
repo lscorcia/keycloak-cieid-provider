@@ -55,4 +55,5 @@ jobs:
 
       - name: Cleanup
         if: always()
+        working-directory: kc-cieid-compose
         run: make clean
