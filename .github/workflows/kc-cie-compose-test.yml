@@ -30,6 +30,14 @@ jobs:
         run: |
           make full-mariadb
 
+      - name: Upload kc-cieid-compose (debug)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kc-cie-compose-directory
+          path: |
+            kc-cieid-compose/**
+
       - name: Upload reports
         if: always()
         uses: actions/upload-artifact@v4
