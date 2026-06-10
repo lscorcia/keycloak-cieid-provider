@@ -1,0 +1,25 @@
+volumes:
+  mariadb-volume:
+    driver: local
+
+services:
+  cieid-mariadb:
+    image: mariadb:11.8 # Latest supported version -> https://www.keycloak.org/server/supported-configurations
+    container_name: "cieid-mariadb"
+    networks:
+      - cieid-local-network
+    ports:
+      - 3306:3306
+    environment:
+      MYSQL_ROOT_PASSWORD: ${CIEID_DB_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${CIEID_DB_SCHEMA}
+      MYSQL_USER: ${CIEID_DB_USR}
+      MYSQL_PASSWORD: ${CIEID_DB_PWD}
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - mariadb-volume:/var/lib/mysql
