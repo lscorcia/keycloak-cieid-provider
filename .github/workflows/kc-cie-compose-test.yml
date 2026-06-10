@@ -1,0 +1,30 @@
+name: KeyCloak CIEID Docker Compose Test
+
+on:
+  pull_request:
+    branches: 
+      - master
+      - main
+    paths:
+      - 'kc-cieid-compose/**'
+      - 'src/**'
+      - 'pom.xml'
+      - 'Makefile'
+      - 'Dockerfile'
+
+jobs:
+  integration-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Verify Docker
+        run: |
+          docker version
+          docker compose version
+
+      - name: Run kc-cieid-compose tests
+        run: |
+          make full-mariadb
