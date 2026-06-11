@@ -21,7 +21,7 @@ create-configuration-client-docker-image:
 #Creazione directory temporanea per dowload dei sorgenti
 	mkdir ${PWD}/tmp-docker-configuration-client
 	cd ${PWD}/tmp-docker-configuration-client
-	git clone https://github.com/polifr/keycloak-cieid-provider-configuration-client.git
+	git clone https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client.git
 	docker build --tag cieidclient:latest-KC ./keycloak-cieid-provider-configuration-client
 	cd -
 # Cancellazione directory temporanea
