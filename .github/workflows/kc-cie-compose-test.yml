@@ -1,16 +1,9 @@
 name: KeyCloak CIEID Docker Compose Test
 
 on:
+  push:
   pull_request:
-    branches: 
-      - master
-      - main
-    paths:
-      - 'kc-cieid-compose/**'
-      - 'src/**'
-      - 'pom.xml'
-      - 'Makefile'
-      - 'Dockerfile'
+    branches: [ main ]
 
 jobs:
   integration-test:
