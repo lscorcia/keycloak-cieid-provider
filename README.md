@@ -18,7 +18,7 @@ sure to read it and understand the config steps and the open issues and
 limitations before planning your Production environment.
 
 ## Status
-This project is has been successfully tested for [CIE ID federation](https://docs.italia.it/italia/cie/cie-manuale-operativo-docs/it/master/onboarding.html) and **it's currently used in Production**.
+This project has been successfully tested for [CIE ID federation](https://docs.italia.it/italia/cie/cie-manuale-operativo-docs/it/master/onboarding.html) and **it's currently used in Production**.
 
 It will be targeting the most recent release of Keycloak as published on the website (see property `version.keycloak` in file `pom.xml`).
 
@@ -27,89 +27,38 @@ are coupled to Keycloak versions. After (major) Keycloak upgrades, you will almo
 certainly have also to update this provider.  
 
 ## Compatibility
-* Keycloak 26.6.x: Release `26.6.1`
-* Keycloak 26.5.x: Release `26.5.3`
-* Keycloak 26.4.x: Release `26.4.2`
-* Keycloak 26.3.x: Release `26.3.1`
-* Keycloak 26.2.x: Release `26.2.3`
-* Keycloak 26.1.x: Release `26.1.4`
-* Keycloak 26.x.x: Release `26.0.5`
-* Keycloak 25.x.x: Release `25.0.1`
-* Keycloak 24.x.x: Release `24.0.1`
-* Keycloak 23.x.x: Release `1.0.7`
-* Keycloak 19.x.x: Release `1.0.6`
+
+| Keycloak | Plugin release | Notes |
+|----------|----------------|-------|
+| 26.7.x | `26.7.0` | |
+| 26.6.x | `26.6.1` | |
+| 26.5.x | `26.5.3` | |
+| 26.4.x | `26.4.2` | |
+| 26.3.x | `26.3.1` | |
+| 26.2.x | `26.2.3` | |
+| 26.1.x | `26.1.4` | IdP entity ID configuration change required (see note below) |
+| 26.0.x | `26.0.5` | |
+| 25.x.x | `25.0.1` | |
+| 24.x.x | `24.0.1` | Web UI configuration restored; provider ID changed from `cieid` to `cieid-saml` (see migration note below) |
+| 23.x.x | `1.0.7` | Web UI configuration not available — use REST API only |
+| 19.x.x | `1.0.6` | |
 
 ## Configuration
-### Release 26.6.1 (latest, Keycloak 26.6.x compatibility)
 Detailed instructions on how to install and configure this component are 
-available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
-To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
-
-### Release 26.5.0 (Keycloak 26.5.x compatibility)
-Detailed instructions on how to install and configure this component are 
-available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
-To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
-
-### Release 26.4.2 (Keycloak 26.4.x compatibility)
-Detailed instructions on how to install and configure this component are 
-available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
-To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
-
-### Release 26.3.1 (Keycloak 26.3.x compatibility)
-Detailed instructions on how to install and configure this component are 
-available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
-To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
-
-### Release 26.2.3 (Keycloak 26.2.x compatibility)
-Detailed instructions on how to install and configure this component are 
-available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
-To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
-
-### Release 26.1.4 (latest, Keycloak 26.1.x compatibility)
-Detailed instructions on how to install and configure this component are 
-available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
-To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
-
-**Important when upgrading to 26.1.4**: given the enhanced compatibility with [spid-sp-test](https://github.com/italia/spid-sp-test/) checks make sure your IdP configuration is maintained with "Identity Provider entity ID"
-* PROD https://idserver.servizicie.interno.gov.it/idp/profile/SAML2/POST/SSO
-* PRE-PROD https://preproduzione.idserver.servizicie.interno.gov.it/idp/profile/SAML2/POST/SSO
-* SPID-SP-TEST https://localhost:8443
-
-![image](https://github.com/user-attachments/assets/2828c301-0977-4cc0-9472-b25f3c83d5c8)
-
-### Release 26.0.5 (latest, Keycloak 26.0.5 compatibility)
-Detailed instructions on how to install and configure this component are 
-available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
-To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
-
-### Release 25.0.1 (latest, Keycloak 25.0.1 compatibility)
-Detailed instructions on how to install and configure this component are 
-available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
-To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
-
-### Release 24.0.1 (latest, Keycloak 24.0.1 compatibility)
-With this release targeting latest Keycloak 24.0.1 it was restored the possibility of configuring the plugin through 
-the Keycloak web UI, detailed instructions on how to install and configure this component are 
-available in the project wiki (https://github.com/italia/spid-keycloak-provider/wiki/Installing-the-SPID-provider).
-To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
-#### IMPORTANT if upgrading from release 1.0.17
-Provider ID was changed from `cieid` to `cieid-saml` in order to account for [hardcoded Keycloak 24.x behavior](https://github.com/keycloak/keycloak/blob/a228b6c7c9ec7a54ee91bb547b42cc4097ae38e2/js/apps/admin-ui/src/identity-providers/add/DetailSettings.tsx#L396). Before upgrading the plugin make sure to run this SQL query against Keycloak database:
-
-    UPDATE IDENTITY_PROVIDER SET PROVIDER_ID="cieid-saml" WHERE PROVIDER_ID="cieid"
-
-### Release 1.0.7 (Keycloak 23.x.x compatibility)
-With the release targeting Keycloak 23.x.x it's not possible to configure the plugin through the Keycloak web UI, 
-but only through REST services. Suggested to use https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
-
-### Release 1.0.6
-It's possible to configure the plugin through the Keycloak web UI, detailed instructions are
 available in the project wiki (https://github.com/lscorcia/keycloak-cieid-provider/wiki/Installing-the-CIE-ID-provider).
 To avoid errors, it's suggested to use anyway https://github.com/nicolabeghin/keycloak-cieid-provider-configuration-client
 
-## Build requirements
-* git
-* JDK17+
-* Maven
+### Upgrading to 26.1.4
+**Important when upgrading to 26.1.4**: make sure your IdP configuration is maintained with the correct "Identity Provider entity ID"
+* PROD https://idserver.servizicie.interno.gov.it/idp/profile/SAML2/POST/SSO
+* PRE-PROD https://preproduzione.idserver.servizicie.interno.gov.it/idp/profile/SAML2/POST/SSO
+
+![image](https://github.com/user-attachments/assets/2828c301-0977-4cc0-9472-b25f3c83d5c8)
+
+### Upgrading from release 1.0.7 to 24.0.1+
+Provider ID was changed from `cieid` to `cieid-saml` in order to account for [hardcoded Keycloak 24.x behavior](https://github.com/keycloak/keycloak/blob/a228b6c7c9ec7a54ee91bb547b42cc4097ae38e2/js/apps/admin-ui/src/identity-providers/add/DetailSettings.tsx#L396). Before upgrading the plugin make sure to run this SQL query against the Keycloak database:
+
+    UPDATE IDENTITY_PROVIDER SET PROVIDER_ID="cieid-saml" WHERE PROVIDER_ID="cieid"
 
 ## Build (without docker)
 Requirements:
