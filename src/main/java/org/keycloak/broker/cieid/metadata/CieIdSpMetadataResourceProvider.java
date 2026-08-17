@@ -515,6 +515,17 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
 
                 Document doc = DocumentUtil.createDocument();
 
+                // Full mode (public SP through a private technology partner): the
+                // technical contact carries the Private qualifier, as in the official
+                // example metadata_full_sp_pubblico_tp_private.xml. For a private SP
+                // the qualifier belongs to the administrative contact only.
+                if (!isSpPrivate)
+                {
+                    Element spTypeElement = doc.createElementNS(CIEID_METADATA_EXTENSIONS_NS, "cie:Private");
+                    spTypeElement.setAttributeNS(XMLNS_NS, "xmlns:cie", CIEID_METADATA_EXTENSIONS_NS);
+                    technicalContactPerson.getExtensions().addExtension(spTypeElement);
+                }
+
                 // VAT Number
                 if (!StringUtil.isNullOrEmpty(technicalContactVatNumber))
                 {
@@ -588,9 +599,16 @@ public class CieIdSpMetadataResourceProvider implements RealmResourceProvider {
         for (int i = lstSingleLogoutService.size() - 1; i >= 0; --i)
             spDescriptor.removeSingleLogoutService(lstSingleLogoutService.get(i));
 
-        // Add the new SingleLogoutService endpoints
-        for (URI logoutEndpoint: logoutEndpoints)
-            spDescriptor.addSingleLogoutService(new EndpointType(logoutBinding, logoutEndpoint));
+        // Add the new SingleLogoutService endpoints.
+        // "Entra con CIE" requires at least one SingleLogoutService instance with the
+        // HTTP-Redirect binding, so always expose it alongside the configured binding
+        // (the Keycloak broker endpoint accepts both GET/Redirect and POST).
+        URI redirectBinding = JBossSAMLURIConstants.SAML_HTTP_REDIRECT_BINDING.getUri();
+        for (URI logoutEndpoint: logoutEndpoints) {
+            spDescriptor.addSingleLogoutService(new EndpointType(redirectBinding, logoutEndpoint));
+            if (!redirectBinding.equals(logoutBinding))
+                spDescriptor.addSingleLogoutService(new EndpointType(logoutBinding, logoutEndpoint));
+        }
 
         // Remove any existing AssertionConsumerService endpoints
         List<IndexedEndpointType> lstAssertionConsumerService = spDescriptor.getAssertionConsumerService();
