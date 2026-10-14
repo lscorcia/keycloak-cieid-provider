@@ -33,8 +33,12 @@
                 </ds:X509Data>
             </ds:KeyInfo>
         </md:KeyDescriptor>
+        <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+            Location="https://keycloak.company.name.it/auth/realms/cieid-realm/broker/idp1/endpoint" />
         <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
             Location="https://keycloak.company.name.it/auth/realms/cieid-realm/broker/idp1/endpoint" />
+        <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+            Location="https://keycloak.company.name.it/auth/realms/cieid-realm/broker/idp2/endpoint" />
         <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
             Location="https://keycloak.company.name.it/auth/realms/cieid-realm/broker/idp2/endpoint" />
         <md:NameIDFormat>Transient</md:NameIDFormat>

@@ -173,10 +173,89 @@ import static org.mockito.ArgumentMatchers.any;
      @Test
      void get_withPrivateSPConfiguration_shouldReturnExpectXml() {
          mockCIEIDProviders(mockPrivateSPConfig(), "idp1", "idp2");
- 
+
          Response response = invitationResourceProvider.get();
          assertEquals(200, response.getStatus());
          assertMetaData(response.getEntity().toString(), "/metadata/expected_metadata_private_SP.xml");
+     }
+
+     @Test
+     void get_shouldExposeAnHttpRedirectSingleLogoutService() throws Exception {
+         // "Entra con CIE" requires at least one SingleLogoutService instance with
+         // the HTTP-Redirect binding.
+         mockCIEIDProviders(mockPublicSPConfig(), "idp1", "idp2");
+
+         Response response = invitationResourceProvider.get();
+         assertEquals(200, response.getStatus());
+
+         org.w3c.dom.Document doc = org.keycloak.saml.common.util.DocumentUtil.getDocument(response.getEntity().toString());
+         org.w3c.dom.NodeList sloList = doc.getElementsByTagNameNS(
+             "urn:oasis:names:tc:SAML:2.0:metadata", "SingleLogoutService");
+
+         boolean hasRedirect = false;
+         for (int i = 0; i < sloList.getLength(); i++) {
+             org.w3c.dom.Element slo = (org.w3c.dom.Element) sloList.item(i);
+             if ("urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect".equals(slo.getAttribute("Binding"))) {
+                 hasRedirect = true;
+                 break;
+             }
+         }
+         Assertions.assertTrue(hasRedirect,
+             "Metadata must contain at least one SingleLogoutService with the HTTP-Redirect binding");
+     }
+
+     @Test
+     void get_withPublicSPAndTechnicalContact_shouldMarkTechnicalContactAsPrivate() throws Exception {
+         // Full mode (public SP through a private technology partner): the technical
+         // ContactPerson must carry the <cie:Private/> qualifier, as in the official
+         // example metadata_full_sp_pubblico_tp_private.xml.
+         mockCIEIDProviders(withTechnicalContact(mockPublicSPConfig()), "idp1", "idp2");
+
+         Response response = invitationResourceProvider.get();
+         assertEquals(200, response.getStatus());
+
+         Assertions.assertTrue(technicalContactHasPrivateQualifier(response.getEntity().toString()),
+             "Technical ContactPerson must contain the cie:Private qualifier when the SP is public");
+     }
+
+     @Test
+     void get_withPrivateSPAndTechnicalContact_shouldNotMarkTechnicalContactAsPrivate() throws Exception {
+         // Private SP: the Private qualifier belongs to the administrative contact only.
+         mockCIEIDProviders(withTechnicalContact(mockPrivateSPConfig()), "idp1", "idp2");
+
+         Response response = invitationResourceProvider.get();
+         assertEquals(200, response.getStatus());
+
+         Assertions.assertFalse(technicalContactHasPrivateQualifier(response.getEntity().toString()),
+             "Technical ContactPerson must not contain the cie:Private qualifier when the SP is private");
+     }
+
+     private Map<String, String> withTechnicalContact(Map<String, String> providerConfig) {
+         providerConfig.put(CieIdIdentityProviderConfig.TECHNICAL_CONTACT_COMPANY, "Tech Partner S.p.A.");
+         providerConfig.put(CieIdIdentityProviderConfig.TECHNICAL_CONTACT_VAT_NUMBER, "IT09876543210");
+         providerConfig.put(CieIdIdentityProviderConfig.TECHNICAL_CONTACT_FISCAL_CODE, "09876543210");
+         providerConfig.put(CieIdIdentityProviderConfig.TECHNICAL_CONTACT_MUNICIPALITY, "TechCity");
+         providerConfig.put(CieIdIdentityProviderConfig.TECHNICAL_CONTACT_PROVINCE, "TC");
+         providerConfig.put(CieIdIdentityProviderConfig.TECHNICAL_CONTACT_COUNTRY, "IT");
+         providerConfig.put(CieIdIdentityProviderConfig.TECHNICAL_CONTACT_PHONE, "+39 000 111 222");
+         providerConfig.put(CieIdIdentityProviderConfig.TECHNICAL_CONTACT_EMAIL, "tech@partner.test");
+         return providerConfig;
+     }
+
+     private boolean technicalContactHasPrivateQualifier(String xmlMetadata) throws Exception {
+         org.w3c.dom.Document doc = org.keycloak.saml.common.util.DocumentUtil.getDocument(xmlMetadata);
+         org.w3c.dom.NodeList contactPersons = doc.getElementsByTagNameNS(
+             "urn:oasis:names:tc:SAML:2.0:metadata", "ContactPerson");
+
+         for (int i = 0; i < contactPersons.getLength(); i++) {
+             org.w3c.dom.Element contactPerson = (org.w3c.dom.Element) contactPersons.item(i);
+             if (!"technical".equals(contactPerson.getAttribute("contactType"))) continue;
+
+             org.w3c.dom.NodeList privateQualifiers = contactPerson.getElementsByTagNameNS(
+                 "https://www.cartaidentita.interno.gov.it/saml-extensions", "Private");
+             return privateQualifiers.getLength() > 0;
+         }
+         return false;
      }
  
      private Map<String, String> mockPublicSPConfig() {
