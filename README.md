@@ -30,6 +30,7 @@ certainly have also to update this provider.
 
 | Keycloak | Plugin release | Notes |
 |----------|----------------|-------|
+| 26.8.x | `26.8.1` | |
 | 26.7.x | `26.7.5` | |
 | 26.6.x | `26.6.1` | |
 | 26.5.x | `26.5.3` | |
